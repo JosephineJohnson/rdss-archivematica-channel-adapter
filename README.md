@@ -1,4 +1,4 @@
-# RDSS Archivematica Channel Adapter
+# RDSS Archivematica Channel Adapter [![Build Status](https://travis-ci.com/JiscRDSS/rdss-archivematica-channel-adapter.svg?token=XEKi3UuVjsxnJD1KeZsi&branch=master)](https://travis-ci.com/JiscRDSS/rdss-archivematica-channel-adapter)
 
 - [Introduction](#introduction)
 - [Usage](#usage)
