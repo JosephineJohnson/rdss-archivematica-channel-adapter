@@ -1,0 +1,7 @@
+---
+language: go
+go:
+  - 1.8
+install: make tools
+script:
+  - make vet vendor-status test
