@@ -42,6 +42,7 @@ func initConfig() {
 
 	// Adding home directory as first search path
 	viper.AddConfigPath("$HOME")
+	viper.AddConfigPath("/etc/archivematica")
 
 	// Read in environment variables that match
 	viper.AutomaticEnv()
