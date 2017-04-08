@@ -8,7 +8,7 @@ set -o nounset
 
 if ! which protoc > /dev/null 2>&1 ; then
 	echo >&2 "Cannot find protoc. Install with \"go get -u github.com/golang/protobuf/protoc-gen-go\""
-    echo >&2 "See https://developers.google.com/protocol-buffers/ for more instructions.";
+	echo >&2 "See https://developers.google.com/protocol-buffers/ for more instructions.";
 	echo >&2 "Aborting.";
 	exit 1;
 fi

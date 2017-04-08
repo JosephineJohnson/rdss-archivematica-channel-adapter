@@ -6,6 +6,7 @@ default: test vet
 tools:
 	go get -u github.com/golang/dep/...
 	go get -u golang.org/x/tools/cmd/cover
+	go get -u github.com/golang/protobuf/protoc-gen-go
 
 build:
 	go install $(PKGS)
