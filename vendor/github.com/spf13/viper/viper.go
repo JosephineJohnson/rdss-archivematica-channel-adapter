@@ -21,6 +21,7 @@ package viper
 
 import (
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
@@ -40,6 +41,11 @@ import (
 
 var v *Viper
 
+type RemoteResponse struct {
+	Value []byte
+	Error error
+}
+
 func init() {
 	v = New()
 }
@@ -47,6 +53,7 @@ func init() {
 type remoteConfigFactory interface {
 	Get(rp RemoteProvider) (io.Reader, error)
 	Watch(rp RemoteProvider) (io.Reader, error)
+	WatchChannel(rp RemoteProvider)(<-chan *RemoteResponse, chan bool)
 }
 
 // RemoteConfig is optional, see the remote package
@@ -576,6 +583,7 @@ func GetViper() *Viper {
 }
 
 // Get can retrieve any value given the key to use.
+// Get is case-insensitive for a key.
 // Get has the behavior of returning the value associated with the first
 // place from where it is set. Viper will check in the following order:
 // override, flag, env, config file, key/value store, default
@@ -619,6 +627,7 @@ func (v *Viper) Get(key string) interface{} {
 }
 
 // Sub returns new Viper instance representing a sub tree of this instance.
+// Sub is case-insensitive for a key.
 func Sub(key string) *Viper { return v.Sub(key) }
 func (v *Viper) Sub(key string) *Viper {
 	subv := New()
@@ -711,7 +720,15 @@ func (v *Viper) GetSizeInBytes(key string) uint {
 // UnmarshalKey takes a single key and unmarshals it into a Struct.
 func UnmarshalKey(key string, rawVal interface{}) error { return v.UnmarshalKey(key, rawVal) }
 func (v *Viper) UnmarshalKey(key string, rawVal interface{}) error {
-	return mapstructure.Decode(v.Get(key), rawVal)
+	err := decode(v.Get(key), defaultDecoderConfig(rawVal))
+
+	if err != nil {
+		return err
+	}
+
+	v.insensitiviseMaps()
+
+	return nil
 }
 
 // Unmarshal unmarshals the config into a Struct. Make sure that the tags
@@ -878,7 +895,9 @@ func (v *Viper) find(lcaseKey string) interface{} {
 			return cast.ToBool(flag.ValueString())
 		case "stringSlice":
 			s := strings.TrimPrefix(flag.ValueString(), "[")
-			return strings.TrimSuffix(s, "]")
+			s = strings.TrimSuffix(s, "]")
+			res, _ := readAsCSV(s)
+			return res
 		default:
 			return flag.ValueString()
 		}
@@ -945,7 +964,9 @@ func (v *Viper) find(lcaseKey string) interface{} {
 			return cast.ToBool(flag.ValueString())
 		case "stringSlice":
 			s := strings.TrimPrefix(flag.ValueString(), "[")
-			return strings.TrimSuffix(s, "]")
+			s = strings.TrimSuffix(s, "]")
+			res, _ := readAsCSV(s)
+			return res
 		default:
 			return flag.ValueString()
 		}
@@ -955,7 +976,17 @@ func (v *Viper) find(lcaseKey string) interface{} {
 	return nil
 }
 
+func readAsCSV(val string) ([]string, error) {
+	if val == "" {
+		return []string{}, nil
+	}
+	stringReader := strings.NewReader(val)
+	csvReader := csv.NewReader(stringReader)
+	return csvReader.Read()
+}
+
 // IsSet checks to see if the key has been set in any of the data locations.
+// IsSet is case-insensitive for a key.
 func IsSet(key string) bool { return v.IsSet(key) }
 func (v *Viper) IsSet(key string) bool {
 	lcaseKey := strings.ToLower(key)
@@ -1037,6 +1068,7 @@ func (v *Viper) InConfig(key string) bool {
 }
 
 // SetDefault sets the default value for this key.
+// SetDefault is case-insensitive for a key.
 // Default only used when no value is provided by the user via flag, config or ENV.
 func SetDefault(key string, value interface{}) { v.SetDefault(key, value) }
 func (v *Viper) SetDefault(key string, value interface{}) {
@@ -1053,6 +1085,7 @@ func (v *Viper) SetDefault(key string, value interface{}) {
 }
 
 // Set sets the value for the key in the override regiser.
+// Set is case-insensitive for a key.
 // Will be used instead of values obtained via
 // flags, config file, ENV, default, or key/value store.
 func Set(key string, value interface{}) { v.Set(key, value) }
@@ -1088,22 +1121,28 @@ func (v *Viper) ReadInConfig() error {
 		return err
 	}
 
-	v.config = make(map[string]interface{})
+	config := make(map[string]interface{})
 
-	return v.unmarshalReader(bytes.NewReader(file), v.config)
+	err = v.unmarshalReader(bytes.NewReader(file), config)
+	if err != nil {
+		return err
+	}
+
+	v.config = config
+	return nil
 }
 
 // MergeInConfig merges a new configuration with an existing config.
 func MergeInConfig() error { return v.MergeInConfig() }
 func (v *Viper) MergeInConfig() error {
 	jww.INFO.Println("Attempting to merge in config file")
-	if !stringInSlice(v.getConfigType(), SupportedExts) {
-		return UnsupportedConfigError(v.getConfigType())
-	}
-
 	filename, err := v.getConfigFile()
 	if err != nil {
 		return err
+	}
+
+	if !stringInSlice(v.getConfigType(), SupportedExts) {
+		return UnsupportedConfigError(v.getConfigType())
 	}
 
 	file, err := afero.ReadFile(v.fs, filename)
@@ -1244,6 +1283,10 @@ func (v *Viper) WatchRemoteConfig() error {
 	return v.watchKeyValueConfig()
 }
 
+func (v *Viper) WatchRemoteConfigOnChannel() error {
+	return v.watchKeyValueConfigOnChannel()
+}
+
 // Unmarshall a Reader into a map.
 // Should probably be an unexported function.
 func unmarshalReader(in io.Reader, c map[string]interface{}) error {
@@ -1285,6 +1328,23 @@ func (v *Viper) getRemoteConfig(provider RemoteProvider) (map[string]interface{}
 	}
 	err = v.unmarshalReader(reader, v.kvstore)
 	return v.kvstore, err
+}
+
+// Retrieve the first found remote configuration.
+func (v *Viper) watchKeyValueConfigOnChannel() error {
+	for _, rp := range v.remoteProviders {
+		respc, _ := RemoteConfig.WatchChannel(rp)
+		//Todo: Add quit channel
+		go func(rc <-chan *RemoteResponse) {
+			for {
+				b := <-rc
+				reader := bytes.NewReader(b.Value)
+				v.unmarshalReader(reader, v.kvstore)
+			}
+		}(respc)
+		return nil
+	}
+	return RemoteConfigError("No Files Found")
 }
 
 // Retrieve the first found remote configuration.
