@@ -1,7 +1,9 @@
 ---
 language: go
 go:
-  - 1.8
+  - 1.8.1
 install: make tools
 script:
   - make vet vendor-status test
+notifications:
+  email: false
