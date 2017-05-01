@@ -1,0 +1,20 @@
+{
+    "version": "0.1.0",
+    "command": "sh",
+    "isShellCommand": false,
+    "args": [
+        "-c"
+    ],
+    "showOutput": "always",
+    "suppressTaskName": false,
+    "tasks": [
+        {
+            "taskName": "make build",
+            "isBuildCommand": true
+        },
+        {
+            "taskName": "make test",
+            "isTestCommand": true
+        }
+    ]
+}
