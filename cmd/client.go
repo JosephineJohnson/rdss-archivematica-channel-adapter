@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/outbound/pb"
+	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/publisher/pb"
 )
 
 var (

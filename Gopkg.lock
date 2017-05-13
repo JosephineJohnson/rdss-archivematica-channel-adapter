@@ -1,4 +1,4 @@
-memo = "45e42a95f3a84583fa9571096cebcb2a1fcd0bba50ed6d44a7b2c05ba8825233"
+memo = "68da7ca849c14be32d5cf2f24e381ab9ecc8e3ca5cf1797be83059f8742812b7"
 
 [[projects]]
   name = "github.com/Sirupsen/logrus"
@@ -8,9 +8,9 @@ memo = "45e42a95f3a84583fa9571096cebcb2a1fcd0bba50ed6d44a7b2c05ba8825233"
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","private/protocol","private/protocol/json/jsonutil","private/protocol/jsonrpc","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/kinesis","service/kinesis/kinesisiface","service/sts"]
-  revision = "0dbc446aca87aebb6e0a24509b59bafc0e3ec0ae"
-  version = "v1.8.19"
+  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","private/protocol","private/protocol/json/jsonutil","private/protocol/jsonrpc","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/restxml","private/protocol/xml/xmlutil","service/kinesis","service/kinesis/kinesisiface","service/s3","service/s3/s3iface","service/s3/s3manager","service/sts"]
+  revision = "cea091b5b8fe6fcecf0eb6ec8f1a2570ff4ee6a7"
+  version = "v1.8.22"
 
 [[projects]]
   name = "github.com/fsnotify/fsnotify"
@@ -28,13 +28,13 @@ memo = "45e42a95f3a84583fa9571096cebcb2a1fcd0bba50ed6d44a7b2c05ba8825233"
   branch = "master"
   name = "github.com/golang/protobuf"
   packages = ["proto","ptypes/any"]
-  revision = "18c9bb3261723cd5401db4d0c9fbc5c3b6c70fe8"
+  revision = "fec3b39b059c0f88fa6b20f5ed012b1aa203a8b4"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
   packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
-  revision = "7fa7fff964d035e8a162cce3a164b3ad02ad651b"
+  revision = "392dba7d905ed5d04a5794ba89f558b27e2ba1ca"
 
 [[projects]]
   branch = "master"
@@ -73,6 +73,12 @@ memo = "45e42a95f3a84583fa9571096cebcb2a1fcd0bba50ed6d44a7b2c05ba8825233"
   version = "v0.5.0"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/spf13/afero"
   packages = [".","mem"]
@@ -88,19 +94,19 @@ memo = "45e42a95f3a84583fa9571096cebcb2a1fcd0bba50ed6d44a7b2c05ba8825233"
   branch = "master"
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "8f0203be891287870100e4af46262cdf4a4261d1"
+  revision = "90687e7bfc7e1e5cd88eb1f513f32f01dc03dd7c"
 
 [[projects]]
   branch = "master"
   name = "github.com/spf13/jwalterweatherman"
   packages = ["."]
-  revision = "fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66"
+  revision = "8f07c835e5cc1450c082fe3a439cf87b0cbb2d99"
 
 [[projects]]
   branch = "master"
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "c990990ab4981d84da820b7b00c85139ca150b5f"
+  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
 
 [[projects]]
   branch = "master"
@@ -112,19 +118,19 @@ memo = "45e42a95f3a84583fa9571096cebcb2a1fcd0bba50ed6d44a7b2c05ba8825233"
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "0819898fb4973868bba6de59b6aaad75beea9a6a"
+  revision = "84f0e6f92b10139f986b1756e149a7d9de270cdc"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "9ccfe848b9db8435a24c424abbc07a921adf1df5"
+  revision = "f845067cf72a21fb4929b0e6a35273bd83b56396"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["internal/gen","internal/triegen","internal/ucd","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "470f45bf29f4147d6fbd7dfd0a02a848e49f5bf4"
+  revision = "19e51611da83d6be54ddafce4a4af510cb3e9ea4"
 
 [[projects]]
   branch = "master"

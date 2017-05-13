@@ -7,7 +7,7 @@ set -o nounset
 readonly __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly __root="$(cd "$(dirname "${__dir}")" && pwd)"
 
-readonly workdir="$(mktemp --directory --suffix=rdss-archivematica-channel-adapter)"
+readonly workdir="$(mktemp -d)"
 readonly profile="$workdir/cover.out"
 readonly mode=count
 

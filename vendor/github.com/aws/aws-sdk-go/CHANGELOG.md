@@ -1,3 +1,33 @@
+Release v1.8.22 (2017-05-11)
+===
+
+### Service Client Updates
+* `service/elb`: Updates service API, documentation, and paginators
+* `service/elbv2`: Updates service API and documentation
+* `service/lexmodelbuildingservice`: Updates service API and documentation
+* `service/organizations`: Updates service API, documentation, paginators, and examples
+  * AWS Organizations APIs that return an Account object now include the email address associated with the account’s root user.
+
+Release v1.8.21 (2017-05-09)
+===
+
+### Service Client Updates
+* `service/codestar`: Updates service documentation
+  * Updated documentation for AWS CodeStar.
+* `service/workspaces`: Updates service API, documentation, and paginators
+  * Doc-only Update for WorkSpaces
+
+Release v1.8.20 (2017-05-04)
+===
+
+### Service Client Updates
+* `service/ecs`: Updates service API, documentation, and paginators
+  * Exposes container instance registration time in ECS:DescribeContainerInstances.
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+* `service/marketplaceentitlementservice`: Adds new service
+* `service/lambda`: Updates service API and documentation
+  * Support for UpdateFunctionCode DryRun option
+
 Release v1.8.19 (2017-04-28)
 ===
 

@@ -28,4 +28,4 @@ protoc \
 	-I. \
 	-I${GOPATH}/src \
 	--go_out=plugins=grpc:${GOPATH}/src/github.com/JiscRDSS/rdss-archivematica-channel-adapter \
-	outbound/pb/rpc.proto
+	publisher/pb/rpc.proto

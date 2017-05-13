@@ -28,9 +28,7 @@ vet:
 	fi
 
 cover:
-	go test $(PKGS) -coverprofile=coverage.out
-	go tool cover -html=coverage.out
-	rm coverage.out
+	@hack/coverage.sh
 
 vendor-status:
 	dep status
@@ -38,6 +36,9 @@ vendor-status:
 proto:
 	hack/build-proto.sh
 
+bench:
+	@go test -v -run=^$ -bench=$(PKGS)
+
 .NOTPARALLEL:
 
-.PHONY: default tools build test testrace vendor-status proto
+.PHONY: default tools build test testrace cover vendor-status proto bench
