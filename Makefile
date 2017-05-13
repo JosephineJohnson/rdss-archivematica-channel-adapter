@@ -9,10 +9,15 @@ tools:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
 build:
-	go install $(PKGS)
+	@env CGO_ENABLED=0 go install $(PKGS)
 
 test:
-	go test -v -i -race $(PKGS)
+	@go test -i $(PKGS)
+	@go test $(PKGS)
+
+testrace:
+	@go test -i -race $(PKGS)
+	@go test -race $(PKGS)
 
 vet:
 	@go vet $(PKGS); if [ $$? -eq 1 ]; then \
@@ -35,4 +40,4 @@ proto:
 
 .NOTPARALLEL:
 
-.PHONY: default tools build test vendor-status proto
+.PHONY: default tools build test testrace vendor-status proto
