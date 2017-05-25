@@ -135,7 +135,7 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Add("Content-Type", mediaType)
 	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", c.UserAgent)
-	req.Header.Add("Authentication", fmt.Sprintf("ApiKey %s:%s", c.User, c.Key))
+	req.Header.Add("Authorization", fmt.Sprintf("ApiKey %s:%s", c.User, c.Key))
 	return req, nil
 }
 
