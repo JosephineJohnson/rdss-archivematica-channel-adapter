@@ -90,7 +90,9 @@ func TestTransferSession_Start(t *testing.T) {
 	c := getClient(t)
 	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
 	sess, _ := NewTransferSession(c, "Test", fs)
-	sess.Start()
+	if err := sess.Start(); err != nil {
+		t.Fatal(err)
+	}
 
 	ts := c.Transfer.(*ts)
 	if ts.approveReq.Directory != sess.Path {
@@ -114,12 +116,20 @@ type ts struct {
 	approveReq *TransferApproveRequest
 }
 
-func (ts *ts) Start(ctx context.Context, req *TransferStartRequest) (*Response, error) {
-	ts.startReq = req
-	return &Response{}, nil
+func (ts *ts) Start(ctx context.Context, req *TransferStartRequest) (*TransferStartResponse, *Response, error) {
+	return nil, nil, nil
 }
 
-func (ts *ts) Approve(ctx context.Context, req *TransferApproveRequest) (*Response, error) {
+func (ts *ts) Approve(ctx context.Context, req *TransferApproveRequest) (*TransferApproveResponse, *Response, error) {
 	ts.approveReq = req
-	return &Response{}, nil
+	return &TransferApproveResponse{}, &Response{}, nil
+}
+
+func (ts *ts) Unapproved(ctx context.Context, req *TransferUnapprovedRequest) (*TransferUnapprovedResponse, *Response, error) {
+	return &TransferUnapprovedResponse{
+		Message: "Fetched unapproved transfers successfully.",
+		Results: []*TransferUnapprovedResponseResult{
+			&TransferUnapprovedResponseResult{Directory: "Test"},
+		},
+	}, &Response{}, nil
 }
