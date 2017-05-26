@@ -19,25 +19,6 @@ import (
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/message"
 )
 
-type Config struct {
-	QueueMain    string
-	QueueInvalid string
-	QueueError   string
-}
-
-func (c *Config) Validate() error {
-	if c.QueueMain == "" {
-		return errors.New("main queue name is undefined")
-	}
-	if c.QueueInvalid == "" {
-		return errors.New("invalid queue name is undefined")
-	}
-	if c.QueueError == "" {
-		return errors.New("error queue name is undefined")
-	}
-	return nil
-}
-
 // Broker is a broker client conforming to the RDSS messaging API.
 type Broker struct {
 	backend backend.Backend
@@ -192,4 +173,8 @@ func (b *Broker) Request(ctx context.Context, msg *message.Message) error {
 // RequestResponse sends a request and waits until a response is received.
 func (b *Broker) RequestResponse(context.Context, *message.Message) (*message.Message, error) {
 	return nil, errors.New("not implemented yet")
+}
+
+func (b *Broker) Close() error {
+	return b.backend.Close()
 }

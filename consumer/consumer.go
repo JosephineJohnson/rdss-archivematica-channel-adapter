@@ -54,6 +54,7 @@ func (c *ConsumerImpl) Start() {
 	c.broker.SubscribeType(message.TypeMetadataCreate, c.handleMetadataCreateRequest)
 
 	<-c.ctx.Done()
+	c.broker.Close()
 	c.logger.Info("Consumer says good-bye!")
 }
 

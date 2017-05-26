@@ -53,11 +53,16 @@ error = "error"
 # This adapter uses aws-sdk-go. The credentials must be defined using the
 # canonical environment variables, read more at https://goo.gl/xsWyS9.
 
-tls = true
+# client_name = "..."
+# region = "..."
 
-# Custom endpoints for Kinesis and DynamoDB, useful in local environments.
-#endpoint = "https://127.0.0.1:4567"
-#dynamodb_endpoint = "https://127.0.0.1:4568"
+# Kinesis-specific configuration
+tls = true
+# endpoint = "https://127.0.0.1:4567"
+
+# Dynamo-specific parameters
+tls_dynamodb = true
+# endpoint_dynamodb = "https://127.0.0.1:4568"
 `
 
 var (

@@ -8,6 +8,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 	"github.com/pkg/errors"
@@ -25,25 +27,13 @@ func New(opts *backend.Opts) (backend.Backend, error) {
 
 		// TODO: use existing logger intead. No way to pass it right now!
 		logger: log.StandardLogger().WithField("cmd", "consumer").WithField("z-backend", "kinesis"),
+
+		Kinesis:  getKinesisInstance(opts),
+		DynamoDB: getDynamoDBInstance(opts),
 	}
 
-	sess := session.Must(session.NewSession())
-	if ep, ok := opts.Opts["endpoint"]; ok {
-		sess.Config.Endpoint = aws.String(ep)
-	}
-	if tls, ok := opts.Opts["tls"]; ok {
-		tls, err := strconv.ParseBool(tls)
-		if err == nil && !tls {
-			sess.Config.DisableSSL = aws.Bool(tls)
-		}
-	}
-
-	b.session = sess
-	b.kinesis = kinesis.New(b.session)
-
-	if cn, ok := opts.Opts["client-name"]; ok {
-		b.clientName = cn
-	} else {
+	b.clientName = opts.Opts["client-name"]
+	if b.clientName == "" {
 		b.clientName = util.GenId(10)
 	}
 
@@ -55,12 +45,14 @@ func init() {
 }
 
 type BackendImpl struct {
-	session *session.Session
-	kinesis kinesisiface.KinesisAPI
-	logger  log.FieldLogger
+	logger log.FieldLogger
 
 	// Application name
 	clientName string
+
+	// AWS clients
+	Kinesis  kinesisiface.KinesisAPI
+	DynamoDB dynamodbiface.DynamoDBAPI
 
 	// Each stream is assigned a processor.
 	procs map[string]*processor
@@ -100,7 +92,7 @@ func (b *BackendImpl) Check(topic string) error {
 	req := &kinesis.DescribeStreamInput{
 		StreamName: aws.String(topic),
 	}
-	resp, err := b.kinesis.DescribeStreamWithContext(context.TODO(), req)
+	resp, err := b.Kinesis.DescribeStreamWithContext(context.TODO(), req)
 	if err != nil {
 		return errors.Wrapf(err, "kinesis failed describing stream %s", topic)
 	}
@@ -120,8 +112,8 @@ func (b *BackendImpl) Close() error {
 }
 
 // mError puts an erroneous message to the Error Message Queue.
-func (b *BackendImpl) putError(r *kinesis.Record, err error) {
-	b.logger.WithField("code", err).Errorln("Moving message to Error Message Queue:", *r.SequenceNumber)
+func (b *BackendImpl) putError(err error) {
+	b.logger.WithField("code", err).Errorln("Moving message to Error Message Queue")
 	return
 }
 
@@ -129,4 +121,40 @@ func (b *BackendImpl) putError(r *kinesis.Record, err error) {
 func (b *BackendImpl) putInvalid(r *kinesis.Record, err error) {
 	b.logger.WithField("code", err).Errorln("Moving message to Invalid Message Queue:", *r.SequenceNumber)
 	return
+}
+
+func getKinesisInstance(opts *backend.Opts) kinesisiface.KinesisAPI {
+	config := aws.NewConfig()
+	if region, ok := opts.Opts["region"]; ok {
+		config = config.WithRegion(region)
+	}
+	if endpoint, ok := opts.Opts["endpoint"]; ok {
+		config = config.WithEndpoint(endpoint)
+	}
+	if tls, ok := opts.Opts["tls"]; ok {
+		tls, err := strconv.ParseBool(tls)
+		if err == nil {
+			config = config.WithDisableSSL(!tls)
+		}
+	}
+
+	return kinesis.New(session.Must(session.NewSession(config)))
+}
+
+func getDynamoDBInstance(opts *backend.Opts) dynamodbiface.DynamoDBAPI {
+	config := aws.NewConfig()
+	if region, ok := opts.Opts["region"]; ok {
+		config = config.WithRegion(region)
+	}
+	if endpoint, ok := opts.Opts["endpoint-dynamodb"]; ok {
+		config = config.WithEndpoint(endpoint)
+	}
+	if tls, ok := opts.Opts["tls-dynamodb"]; ok {
+		tls, err := strconv.ParseBool(tls)
+		if err == nil {
+			config = config.WithDisableSSL(!tls)
+		}
+	}
+
+	return dynamodb.New(session.Must(session.NewSession(config)))
 }

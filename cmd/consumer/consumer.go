@@ -84,22 +84,23 @@ func start() {
 
 func createBrokerClient() (*broker.Broker, error) {
 	var (
-		opts  = []backend.DialOpts{}
-		qM    = viper.GetString("broker.queues.main")
-		qI    = viper.GetString("broker.queues.invalid")
-		qE    = viper.GetString("broker.queues.error")
-		epKi  = viper.GetString("broker.kinesis.endpoint")
-		epDb  = viper.GetString("broker.kinesis.dynamodb_endpoint")
-		tlsKi = viper.GetString("broker.kinesis.tls")
+		qM = viper.GetString("broker.queues.main")
+		qI = viper.GetString("broker.queues.invalid")
+		qE = viper.GetString("broker.queues.error")
+
+		opts          = []backend.DialOpts{}
+		backendConfig = map[string]string{
+			"client-name":       viper.GetString("broker.kinesis.client_name"),
+			"region":            viper.GetString("broker.kinesis.region"),
+			"tls":               viper.GetString("broker.kinesis.tls"),
+			"endpoint":          viper.GetString("broker.kinesis.endpoint"),
+			"tls-dynamodb":      viper.GetString("broker.kinesis.tls_dynamodb"),
+			"endpoint-dynamodb": viper.GetString("broker.kinesis.endpoint_dynamodb"),
+		}
 	)
-	if epKi != "" {
-		opts = append(opts, backend.WithKeyValue("endpoint", epKi))
-	}
-	if epDb != "" {
-		opts = append(opts, backend.WithKeyValue("dynamodb_endpoint", epDb))
-	}
-	if tlsKi != "" {
-		opts = append(opts, backend.WithKeyValue("tls", tlsKi))
+
+	for key, value := range backendConfig {
+		opts = append(opts, backend.WithKeyValue(key, value))
 	}
 
 	ba, err := backend.Dial("kinesis", opts...)

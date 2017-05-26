@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Backend is a low-level interface for communicating with a RDSS broker.
+// Backend is a low-level interface used to interact with RDSS brokers.
 type Backend interface {
 	Publish(topic string, data []byte) error
 

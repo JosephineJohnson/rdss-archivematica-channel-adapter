@@ -2,14 +2,12 @@ package kinesis
 
 import (
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/twitchscience/kinsumer"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend/kinesis/kcl"
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend/kinesis/kcl/checkpointer"
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend/kinesis/kcl/locker"
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend/kinesis/kcl/snitcher"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/errors"
 )
 
@@ -20,52 +18,59 @@ type processor struct {
 	logger  log.FieldLogger
 	backend *BackendImpl
 	stream  string
-
-	kcl    *kcl.Client
-	reader *kcl.SharedReader
+	quit    chan struct{}
+	closed  bool
 
 	handlers []backend.Handler
 	mu       sync.RWMutex
+
+	kinsumer *kinsumer.Kinsumer
 }
 
-func newProcessor(backend *BackendImpl, stream string) (*processor, error) {
-	p := &processor{
+const freq = 10 * time.Second
+
+func newProcessor(backend *BackendImpl, stream string) (p *processor, err error) {
+	p = &processor{
 		logger:  backend.logger.WithField("stream", stream),
 		backend: backend,
 		stream:  stream,
+		quit:    make(chan struct{}),
 	}
 
-	l := locker.NewDummyLocker()
-	c := checkpointer.NewDummyCheckpointer()
-	s := snitcher.NewDummySnitcher()
-	p.kcl = kcl.New(p.backend.kinesis, l, c, s, p.logger)
-
-	var err error
-	p.reader, err = p.kcl.NewSharedReader(p.stream, p.backend.clientName)
+	kcfg := kinsumer.NewConfig().WithShardCheckFrequency(freq).WithLeaderActionFrequency(freq)
+	p.kinsumer, err = kinsumer.NewWithInterfaces(backend.Kinesis, backend.DynamoDB, stream, "rdss_am", backend.clientName, kcfg)
 	if err != nil {
+		p.logger.Fatalln(err)
 		return nil, err
 	}
 
-	go p.loop()
+	if err := p.kinsumer.Run(); err != nil {
+		p.logger.Fatalln(err)
+	}
+
+	go p.consumeRecords()
 
 	return p, nil
 }
 
-func (p *processor) loop() {
-	var err error
-	for m := range p.reader.Records() {
-		err = p.route(m.Data)
-		if err != nil {
-			p.backend.putError(m, err)
+func (p *processor) consumeRecords() {
+	for {
+		select {
+		case <-p.quit:
+			return
+		default:
+			record, err := p.kinsumer.Next()
+			if err != nil {
+				panic(err) // TODO: manage error
+			}
+			if p.closed {
+				return
+			}
+			err = p.route(record)
+			if err != nil {
+				p.backend.putError(err)
+			}
 		}
-		// Regard the message as consumed by uptaing the checkpoint.
-		err = p.reader.UpdateCheckpoint()
-		if err != nil {
-			p.logger.Errorln("The processor failed when it attempted to update the checkpoint!", err)
-		}
-	}
-	if err = p.reader.Close(); err != nil {
-		p.logger.Errorln("Reader failed when it was closing:", err)
 	}
 }
 
@@ -95,5 +100,7 @@ func (p *processor) addHandler(cb backend.Handler) {
 }
 
 func (p *processor) stop() {
-	p.reader.Close() // TODO
+	p.closed = true
+	close(p.quit)
+	p.kinsumer.Stop()
 }
