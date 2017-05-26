@@ -81,7 +81,10 @@ func (p *processor) route(data []byte) error {
 			err = rErr
 		}
 	}
-	return &errors.Error{Err: err, Kind: errors.GENERR006}
+	if err != nil {
+		return &errors.Error{Err: err, Kind: errors.GENERR006}
+	}
+	return nil
 }
 
 func (p *processor) addHandler(cb backend.Handler) {
