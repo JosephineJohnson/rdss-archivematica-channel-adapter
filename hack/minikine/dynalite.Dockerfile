@@ -1,9 +1,9 @@
 FROM node:alpine
 
-RUN npm install --no-optional -g dynalite && npm cache clear && rm -rf /tmp/* /var/tmp/*
+ADD . /src
 
-EXPOSE 4567
+WORKDIR /src
 
-CMD ["--port 4567"]
+RUN npm install
 
-ENTRYPOINT ["dynalite"]
+ENTRYPOINT ["node", "./dynalite.js"]
