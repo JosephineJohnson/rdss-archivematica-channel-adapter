@@ -70,6 +70,26 @@ func (s *TransferSession) Create(name string) (afero.File, error) {
 	return s.fs.Create(name)
 }
 
+// ProcessingConfig inclues a processing configuration (processingMCP.xml)
+// given its name.
+func (s *TransferSession) ProcessingConfig(name string) error {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	defer cancel()
+
+	config, _, err := s.c.ProcessingConfig.Get(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	err = s.fs.WriteReader("processingMCP.xml", config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Start submits the transfer to Archivematica.
 func (s *TransferSession) Start() error {
 	var (
@@ -111,7 +131,7 @@ func (s *TransferSession) Start() error {
 		}
 
 		// Wait for an extra second before the next attempt
-		time.Sleep(time.Second*1)
+		time.Sleep(time.Second * 1)
 	}
 }
 
