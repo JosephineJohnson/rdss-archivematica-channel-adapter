@@ -35,7 +35,8 @@ type Client struct {
 	Key  string
 
 	// Services used for communicating with the API
-	Transfer TransferService
+	Transfer         TransferService
+	ProcessingConfig ProcessingConfigService
 
 	// Local temporary filesystem. See transfer_session.go for more details.
 	Fs afero.Fs
@@ -75,6 +76,7 @@ func NewClient(httpClient *http.Client, bu, u, k string) *Client {
 		Fs:        afero.NewMemMapFs(),
 	}
 	c.Transfer = &TransferServiceOp{client: c}
+	c.ProcessingConfig = &ProcessingConfigOp{client: c}
 	return c
 }
 
@@ -109,11 +111,19 @@ func SetFs(fs afero.Fs) ClientOpt {
 	}
 }
 
+type RequestOpt func(*http.Request)
+
+func WithRequestAcceptXml() RequestOpt {
+	return func(req *http.Request) {
+		req.Header.Set("Accept", "application/xml")
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr,
 // which will be resolved to the BaseURL of the Client. Relative URLS should
 // always be specified without a preceding slash. If specified, the value
 // pointed to by body is JSON encoded and included in as the request body.
-func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}) (*http.Request, error) {
+func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}, opts ...RequestOpt) (*http.Request, error) {
 	rel, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -134,6 +144,11 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", c.UserAgent)
 	req.Header.Add("Authorization", fmt.Sprintf("ApiKey %s:%s", c.User, c.Key))
+
+	for _, fn := range opts {
+		fn(req)
+	}
+
 	return req, nil
 }
 
