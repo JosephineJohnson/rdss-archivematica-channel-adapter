@@ -4,6 +4,6 @@ ADD . /src
 
 WORKDIR /src
 
-RUN npm install
+RUN apk add --no-cache git && npm install
 
 ENTRYPOINT ["node", "./minikine.js"]
