@@ -74,6 +74,8 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	if err != nil {
 		return err
 	}
+	err = t.ProcessingConfig("automated") // Automated workflow
+	c.logger.Debugf("Attempted to download processing configuration, err=%v", err)
 	for _, file := range body.Files {
 		name := getFilename(file.Path)
 		if name == "" {

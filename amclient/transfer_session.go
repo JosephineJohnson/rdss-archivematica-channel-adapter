@@ -82,7 +82,7 @@ func (s *TransferSession) ProcessingConfig(name string) error {
 		return err
 	}
 
-	err = s.fs.WriteReader("processingMCP.xml", config)
+	err = s.fs.SafeWriteReader("/processingMCP.xml", config)
 	if err != nil {
 		return err
 	}
