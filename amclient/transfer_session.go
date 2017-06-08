@@ -2,6 +2,7 @@ package amclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -27,6 +28,8 @@ type TransferSession struct {
 	c    *Client
 	fs   *afero.Afero
 	Path string
+
+	FileMetadata map[string]*FileMetadata
 }
 
 // NewTransferSession returns a pointer to a new TransferSession.
@@ -46,9 +49,10 @@ func NewTransferSession(c *Client, name string, depositFs afero.Fs) (*TransferSe
 		if err == nil {
 			fs := afero.NewBasePathFs(depositFs, nName)
 			return &TransferSession{
-				c:    c,
-				fs:   &afero.Afero{Fs: fs},
-				Path: afero.FullBaseFsPath(fs.(*afero.BasePathFs), "/"),
+				c:            c,
+				fs:           &afero.Afero{Fs: fs},
+				Path:         afero.FullBaseFsPath(fs.(*afero.BasePathFs), "/"),
+				FileMetadata: make(map[string]*FileMetadata),
 			}, nil
 		}
 		nName = fmt.Sprintf("%s-%d", name, counter)
@@ -98,6 +102,9 @@ func (s *TransferSession) Start() error {
 		basePath = path.Base(s.Path)
 		attempts = 0
 	)
+
+	s.createMetadataFile()
+
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 
@@ -150,4 +157,49 @@ func (s *TransferSession) Contents() []string {
 		return nil
 	})
 	return paths
+}
+
+// DescribeFile registers metadata of a file. It causes the transfer to include
+// a `metadata.json` file with the metadata of each file described.
+func (s *TransferSession) DescribeFile(name string, m *FileMetadata) {
+	s.FileMetadata[name] = m
+}
+
+func (s *TransferSession) createMetadataFile() error {
+	if len(s.FileMetadata) == 0 {
+		return errors.New("no files have been described")
+	}
+	if err := s.createMetadataDir(); err != nil {
+		return fmt.Errorf("error using metadata dir: %s", err)
+	}
+	const path = "/metadata/metadata.json"
+	fd, err := s.fs.Create(path)
+	defer fd.Close()
+	if err != nil {
+		return fmt.Errorf("error creating metadata.json: %s", err)
+	}
+	entries := make([]*FileMetadata, 0, len(s.FileMetadata))
+	for _, value := range s.FileMetadata {
+		entries = append(entries, value)
+	}
+	enc := json.NewEncoder(fd)
+	enc.SetIndent("", "\t")
+	if err := enc.Encode(entries); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TransferSession) createMetadataDir() error {
+	const path = "/metadata"
+	if _, err := s.fs.Stat(path); err != nil {
+		return s.fs.Mkdir(path, os.FileMode(0755))
+	}
+	return nil
+}
+
+// FileMetadata represents the metadata entry of a file (see `metadata.json`).
+type FileMetadata struct {
+	Filename string `json:"filename"`
+	DcTitle  string `json:"dc.title,omitempty"`
 }

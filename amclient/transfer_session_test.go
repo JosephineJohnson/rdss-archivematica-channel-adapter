@@ -1,6 +1,7 @@
 package amclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/url"
@@ -83,6 +84,67 @@ func TestTransferSession_Contents(t *testing.T) {
 	have := len(sess.Contents())
 	if want != have {
 		t.Fatalf("Created %d files, only %d found", want, have)
+	}
+}
+
+func TestTransferSession_DescribeFile(t *testing.T) {
+	c := getClient(t)
+	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
+	sess, _ := NewTransferSession(c, "Test", fs)
+	entry := &FileMetadata{DcTitle: "Title"}
+	sess.DescribeFile("foobar", entry)
+
+	e, ok := sess.FileMetadata["foobar"]
+	if !ok {
+		t.Fatalf("The metadata entry was not added to the internal store")
+	}
+	if e != entry {
+		t.Fatalf("The metadata entry found in the internal store wasn't the expected")
+	}
+}
+
+func TestTransferSession_createMetadataFile(t *testing.T) {
+	c := getClient(t)
+	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
+	sess, _ := NewTransferSession(c, "Test", fs)
+	entry := &FileMetadata{Filename: "objects/foobar.jpg", DcTitle: "Title"}
+	sess.DescribeFile("foobar", entry)
+	sess.Start()
+
+	have, err := sess.fs.ReadFile("/metadata/metadata.json")
+	if err != nil {
+		t.Fatalf("Error reading /metadata/metadata.json")
+	}
+
+	want := []byte(`[
+	{
+		"filename": "objects/foobar.jpg",
+		"dc.title": "Title"
+	}
+]
+`)
+	if bytes.Compare(have, want) != 0 {
+		t.Fatalf("Unexpected contents found in metadata file; want: %s, have %s", want, have)
+	}
+}
+
+func TestTransferSession_createMetadataDir(t *testing.T) {
+	c := getClient(t)
+	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
+	sess, _ := NewTransferSession(c, "Test", fs)
+
+	if err := sess.createMetadataDir(); err != nil {
+		t.Fatalf("createMetadataDir failed: %v", err)
+	}
+	info, err := sess.fs.Stat("metadata")
+	if info == nil {
+		t.Fatal("Metadata directory was not created")
+	}
+	if err != nil {
+		t.Fatalf("Metadata directory was not created: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatalf("/metadata is not a directory")
 	}
 }
 
