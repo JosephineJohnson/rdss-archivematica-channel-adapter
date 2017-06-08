@@ -94,6 +94,7 @@ func (m Message) MetadataDeleteRequest() (*MetadataDeleteRequest, error) {
 // Subtypes
 
 type MetadataFile struct {
-	ID   string `json:"id"`
-	Path string `json:"path"`
+	ID    string `json:"id"`
+	Path  string `json:"path"`
+	Title string `json:"title,omitempty"`
 }
