@@ -75,7 +75,9 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 		return err
 	}
 	err = t.ProcessingConfig("automated") // Automated workflow
-	c.logger.Debugf("Attempted to download processing configuration, err=%v", err)
+	if err != nil {
+		c.logger.Warningf("Failed to download `automated` processing configuration: %s", err)
+	}
 	for _, file := range body.Files {
 		name := getFilename(file.Path)
 		if name == "" {
@@ -101,6 +103,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				return
 			}
 			c.logger.Debugf("Downloaded %s - %d bytes written", file.Path, n)
+			t.DescribeFile(name, fileMetadata(name, file))
 		}()
 		if iErr != nil {
 			return iErr
@@ -115,4 +118,11 @@ func getFilename(path string) string {
 		return ""
 	}
 	return strings.TrimPrefix(u.Path, "/")
+}
+
+func fileMetadata(name string, f *message.MetadataFile) *amclient.FileMetadata {
+	return &amclient.FileMetadata{
+		Filename: "objects/" + name,
+		DcTitle:  f.Title,
+	}
 }
