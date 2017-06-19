@@ -78,6 +78,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	if err != nil {
 		c.logger.Warningf("Failed to download `automated` processing configuration: %s", err)
 	}
+	t.Describe(datasetMetadata(body))
 	for _, file := range body.Files {
 		name := getFilename(file.Path)
 		if name == "" {
@@ -121,6 +122,12 @@ func getFilename(path string) string {
 		return ""
 	}
 	return strings.TrimPrefix(u.Path, "/")
+}
+
+func datasetMetadata(f *message.MetadataCreateRequest) *amclient.FileMetadata {
+	return &amclient.FileMetadata{
+		DcTitle: f.Title,
+	}
 }
 
 func fileMetadata(name string, f *message.MetadataFile) *amclient.FileMetadata {
