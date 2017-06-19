@@ -18,8 +18,11 @@ const (
 	// it ceases to wait for the transfer to be picked by MCP and be listed.
 	Timeout = 10 * time.Second
 
-	// Maximum number of attempts to list unapproved transfers.
+	// MaxAttempts is the number of attempts to list unapproved transfers.
 	MaxAttempts = 10
+
+	// Objects prefix
+	objectsDirPrefix = "objects/"
 )
 
 // TransferSession lets you prepare a new transfer and submit it to
@@ -165,6 +168,13 @@ func (s *TransferSession) DescribeFile(name string, m *FileMetadata) {
 	s.FileMetadata[name] = m
 }
 
+// Describe registers metadata of the whole dataset/transfer. It causes the
+// transfer to include a `metadata.json` file with the metadata included.
+func (s *TransferSession) Describe(m *FileMetadata) {
+	m.Filename = objectsDirPrefix
+	s.FileMetadata[objectsDirPrefix] = m
+}
+
 func (s *TransferSession) createMetadataFile() error {
 	if len(s.FileMetadata) == 0 {
 		return errors.New("no files have been described")
@@ -179,8 +189,14 @@ func (s *TransferSession) createMetadataFile() error {
 		return fmt.Errorf("error creating metadata.json: %s", err)
 	}
 	entries := make([]*FileMetadata, 0, len(s.FileMetadata))
-	for _, value := range s.FileMetadata {
-		entries = append(entries, value)
+	// Let's try to add the main "objects/" entry first which is what the reader
+	// would probably expect when inspecting the `metadata.json` file.
+	if entry, ok := s.FileMetadata[objectsDirPrefix]; ok {
+		entries = append(entries, entry)
+		delete(s.FileMetadata, objectsDirPrefix)
+	}
+	for _, entry := range s.FileMetadata {
+		entries = append(entries, entry)
 	}
 	enc := json.NewEncoder(fd)
 	enc.SetIndent("", "\t")

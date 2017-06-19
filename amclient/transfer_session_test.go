@@ -103,12 +103,28 @@ func TestTransferSession_DescribeFile(t *testing.T) {
 	}
 }
 
+func TestTransferSession_Describe(t *testing.T) {
+	c := getClient(t)
+	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
+	sess, _ := NewTransferSession(c, "Test", fs)
+	entry := &FileMetadata{DcTitle: "Title"}
+	sess.Describe(entry)
+
+	e, ok := sess.FileMetadata[objectsDirPrefix]
+	if !ok {
+		t.Fatalf("The metadata entry was not added to the internal store")
+	}
+	if e != entry {
+		t.Fatalf("The metadata entry found in the internal store wasn't the expected")
+	}
+}
+
 func TestTransferSession_createMetadataFile(t *testing.T) {
 	c := getClient(t)
 	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
 	sess, _ := NewTransferSession(c, "Test", fs)
-	entry := &FileMetadata{Filename: "objects/foobar.jpg", DcTitle: "Title"}
-	sess.DescribeFile("foobar", entry)
+	sess.DescribeFile("foobar", &FileMetadata{Filename: "objects/foobar.jpg", DcTitle: "Title"})
+	sess.Describe(&FileMetadata{DcTitle: "Birds are in danger"})
 	sess.Start()
 
 	have, err := sess.fs.ReadFile("/metadata/metadata.json")
@@ -117,6 +133,10 @@ func TestTransferSession_createMetadataFile(t *testing.T) {
 	}
 
 	want := []byte(`[
+	{
+		"filename": "objects/",
+		"dc.title": "Birds are in danger"
+	},
 	{
 		"filename": "objects/foobar.jpg",
 		"dc.title": "Title"

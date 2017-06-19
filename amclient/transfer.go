@@ -8,6 +8,8 @@ import (
 
 const transferBasePath = "api/transfer"
 
+// TransferService is an interface for interfacing with the Transfer endpoints
+// of the Dashboard API.
 type TransferService interface {
 	Start(context.Context, *TransferStartRequest) (*TransferStartResponse, *Response, error)
 	Approve(context.Context, *TransferApproveRequest) (*TransferApproveResponse, *Response, error)
@@ -87,6 +89,8 @@ type TransferUnapprovedResponse struct {
 	Results []*TransferUnapprovedResponseResult `json:"results"`
 }
 
+// TransferUnapprovedResponseResult represents a result of
+// TransferUnapprovedResponse.
 type TransferUnapprovedResponseResult struct {
 	Type      string `json:"type"`
 	Directory string `json:"directory"`

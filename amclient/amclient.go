@@ -111,9 +111,12 @@ func SetFs(fs afero.Fs) ClientOpt {
 	}
 }
 
+// RequestOpt is a function type used to alter requests.
 type RequestOpt func(*http.Request)
 
-func WithRequestAcceptXml() RequestOpt {
+// WithRequestAcceptXML sets the Accept header to "application/xml". This is
+// needed when consuming endpoints that require this configuration.
+func WithRequestAcceptXML() RequestOpt {
 	return func(req *http.Request) {
 		req.Header.Set("Accept", "application/xml")
 	}
