@@ -71,6 +71,10 @@ func (d myKinesis) DescribeStream(input *kinesis.DescribeStreamInput) (*kinesis.
 	return output, nil
 }
 
+func (d myKinesis) DescribeStreamPages(*kinesis.DescribeStreamInput, func(*kinesis.DescribeStreamOutput, bool) bool) error {
+	return nil
+}
+
 type myDynamo struct {
 	dynamodbiface.DynamoDBAPI
 }

@@ -1,9 +1,12 @@
 ---
 language: go
 go:
-  - 1.8.1
-install: make tools
+  - 1.8.3
+install:
+  - make tools
+  - go get github.com/mattn/goveralls
 script:
+  - $HOME/gopath/bin/goveralls -service=travis-ci
   - make vet vendor-status test
 notifications:
   email: false
