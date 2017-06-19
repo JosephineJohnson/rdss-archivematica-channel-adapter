@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"path"
@@ -74,7 +75,15 @@ func (c *Client) TransferSession(name string, depositFs afero.Fs) (*TransferSess
 // Create creates a file in the filesystem, returning the file and an error, if
 // any happens.
 func (s *TransferSession) Create(name string) (afero.File, error) {
-	return s.fs.Create(name)
+	err := s.fs.MkdirAll(filepath.Dir(name), os.FileMode(0755))
+	if err != nil {
+		return nil, err
+	}
+	f, err := s.fs.Create(name)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 // ProcessingConfig inclues a processing configuration (processingMCP.xml)

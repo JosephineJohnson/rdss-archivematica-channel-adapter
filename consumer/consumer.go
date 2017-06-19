@@ -94,15 +94,18 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 			f, err = t.Create(name)
 			if err != nil {
 				iErr = err
+				c.logger.Errorf("Error creating %s: %v", name, err)
 				return
 			}
 			defer f.Close()
+			c.logger.Debugf("Saving %s into %s", file.Path, f.Name())
 			n, err = c.s3.Download(c.ctx, f, file.Path)
 			if err != nil {
 				iErr = err
+				c.logger.Errorf("Error downloading %s: %v", file.Path, err)
 				return
 			}
-			c.logger.Debugf("Downloaded %s - %d bytes written", file.Path, n)
+			c.logger.Debugf("%d bytes written", n)
 			t.DescribeFile(name, fileMetadata(name, file))
 		}()
 		if iErr != nil {

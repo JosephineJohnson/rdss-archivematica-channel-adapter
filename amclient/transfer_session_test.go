@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -58,18 +59,34 @@ func TestNewTransferSession_MaxAttemptsError(t *testing.T) {
 
 func TestTransferSession_Create(t *testing.T) {
 	c := getClient(t)
-	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
-	sess, err := NewTransferSession(c, "Test", fs)
-	f, err := sess.Create("foobar.jpg")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
+	fs := afero.Afero{Fs: afero.NewBasePathFs(afero.NewMemMapFs(), "/")}
+	sess, _ := NewTransferSession(c, "Test", fs)
 
-	want := "/Test/foobar.jpg"
-	have := f.Name()
-	if want != have {
-		t.Fatalf("Want %s, have %s", want, have)
+	tests := []struct {
+		path string
+		want string
+	}{
+		{"foobar.jpg", "/Test/foobar.jpg"},
+		{"foo/bar.jpg", "/Test/foo/bar.jpg"},
+		{"/foo/bar.jpg", "/Test/foo/bar.jpg"},
+		{"/f/o/o/b/a/r.jpg", "/Test/f/o/o/b/a/r.jpg"},
+	}
+	for _, tt := range tests {
+		f, err := sess.Create(tt.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		have := f.Name()
+		if tt.want != have {
+			t.Fatalf("Want %s, have %s", tt.want, have)
+		}
+		dirPath := filepath.Dir(tt.want)
+		if exists, err := fs.DirExists(dirPath); err != nil {
+			t.Fatalf("DirExists failed: %v", err)
+		} else if !exists {
+			t.Fatalf("Directory %s not created", dirPath)
+		}
 	}
 }
 
