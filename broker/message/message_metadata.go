@@ -9,9 +9,10 @@ import (
 // MetadataCreateRequest represents the body of the message.
 type MetadataCreateRequest struct {
 	// TODO: Embed Dataset
-	UUID  string          `json:"datasetUuid"`
-	Title string          `json:"datasetTitle"`
-	Files []*MetadataFile `json:"files,omitempty"`
+	UUID        string          `json:"objectUuid"`
+	Title       string          `json:"objectTitle"`
+	Description string          `json:"objectDescription"`
+	Files       []*MetadataFile `json:"objectFile"`
 }
 
 // MetadataCreateRequest returns the body of the message.
@@ -27,7 +28,7 @@ func (m Message) MetadataCreateRequest() (*MetadataCreateRequest, error) {
 
 // MetadataReadRequest represents the body of the message.
 type MetadataReadRequest struct {
-	UUID string `json:"datasetUuid"`
+	UUID string `json:"objectUuid"`
 }
 
 // MetadataReadRequest returns the body of the message.
@@ -42,9 +43,10 @@ func (m Message) MetadataReadRequest() (*MetadataReadRequest, error) {
 // MetadataReadResponse represents the body of the message.
 type MetadataReadResponse struct {
 	// TODO: Embed Dataset
-	UUID  string          `json:"datasetUuid"`
-	Title string          `json:"datasetTitle"`
-	Files []*MetadataFile `json:"files,omitempty"`
+	UUID        string          `json:"objectUuid"`
+	Title       string          `json:"objectTitle"`
+	Description string          `json:"objectDescription"`
+	Files       []*MetadataFile `json:"objectFile"`
 }
 
 // MetadataReadResponse returns the body of the message.
@@ -61,9 +63,10 @@ func (m Message) MetadataReadResponse() (*MetadataReadResponse, error) {
 // MetadataUpdateRequest represents the body of the message.
 type MetadataUpdateRequest struct {
 	// TODO: Embed Dataset
-	UUID  string          `json:"datasetUuid"`
-	Title string          `json:"datasetTitle"`
-	Files []*MetadataFile `json:"files,omitempty"`
+	UUID        string          `json:"objectUuid"`
+	Title       string          `json:"objectTitle"`
+	Description string          `json:"objectDescription"`
+	Files       []*MetadataFile `json:"objectFile"`
 }
 
 // MetadataUpdateRequest returns the body of the message.
@@ -79,7 +82,7 @@ func (m Message) MetadataUpdateRequest() (*MetadataUpdateRequest, error) {
 
 // MetadataDeleteRequest represents the body of the message.
 type MetadataDeleteRequest struct {
-	UUID string `json:"datasetUuid"`
+	UUID string `json:"objectUuid"`
 }
 
 // MetadataDeleteRequest returns the body of the message.
@@ -94,7 +97,20 @@ func (m Message) MetadataDeleteRequest() (*MetadataDeleteRequest, error) {
 // Subtypes
 
 type MetadataFile struct {
-	ID    string `json:"id"`
-	Path  string `json:"path"`
-	Title string `json:"title,omitempty"`
+	UUID            string                 `json:"fileUuid"`
+	Identifier      string                 `json:"fileIdentifier"`
+	Name            string                 `json:"fileName"`
+	Size            int                    `json:"fileSize"`
+	Checksums       []MetadataFileChecksum `json:"fileChecksum"`
+	Label           string                 `json:"fileLabel"`
+	HasMimeType     bool                   `json:"fileHasMimeType"`
+	FormatType      string                 `json:"fileFormatType"`
+	StorageLocation string                 `json:"fileStorageLocation"`
+	StorageType     string                 `json:"fileStorageType"`
+}
+
+type MetadataFileChecksum struct {
+	UUID  string `json:"checksumUuid"`
+	Type  string `json:"checksumType"`
+	Value string `json:"checksumValue"`
 }

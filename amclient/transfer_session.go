@@ -2,6 +2,7 @@ package amclient
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,6 +35,10 @@ type TransferSession struct {
 	Path string
 
 	FileMetadata map[string]*FileMetadata
+
+	ChecksumsMD5    *ChecksumSet
+	ChecksumsSHA1   *ChecksumSet
+	ChecksumsSHA256 *ChecksumSet
 }
 
 // NewTransferSession returns a pointer to a new TransferSession.
@@ -52,12 +57,16 @@ func NewTransferSession(c *Client, name string, depositFs afero.Fs) (*TransferSe
 		err := depositFs.Mkdir(nName, os.FileMode(0755))
 		if err == nil {
 			fs := afero.NewBasePathFs(depositFs, nName)
-			return &TransferSession{
+			ts := &TransferSession{
 				c:            c,
 				fs:           &afero.Afero{Fs: fs},
 				Path:         afero.FullBaseFsPath(fs.(*afero.BasePathFs), "/"),
 				FileMetadata: make(map[string]*FileMetadata),
-			}, nil
+			}
+			ts.ChecksumsMD5 = NewChecksumSet("md5", ts.fs)
+			ts.ChecksumsSHA1 = NewChecksumSet("sha1", ts.fs)
+			ts.ChecksumsSHA256 = NewChecksumSet("sha256", ts.fs)
+			return ts, nil
 		}
 		nName = fmt.Sprintf("%s-%d", name, counter)
 		counter++
@@ -115,7 +124,17 @@ func (s *TransferSession) Start() error {
 		attempts = 0
 	)
 
-	s.createMetadataFile()
+	if err := s.createMetadataDir(); err != nil {
+		return err
+	}
+
+	if err := s.createMetadataFile(); err != nil {
+		return err
+	}
+
+	if err := s.createChecksumsFiles(); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
@@ -184,12 +203,24 @@ func (s *TransferSession) Describe(m *FileMetadata) {
 	s.FileMetadata[objectsDirPrefix] = m
 }
 
+// ChecksumMD5 registers a MD5 checksum for a file.
+func (s *TransferSession) ChecksumMD5(name, sum string) {
+	s.ChecksumsMD5.Add(name, sum)
+}
+
+// ChecksumSHA1 registers a SHA1 checksum for a file.
+func (s *TransferSession) ChecksumSHA1(name, sum string) {
+	s.ChecksumsSHA1.Add(name, sum)
+}
+
+// ChecksumSHA256 registers a SHA256 checksum for a file.
+func (s *TransferSession) ChecksumSHA256(name, sum string) {
+	s.ChecksumsSHA256.Add(name, sum)
+}
+
 func (s *TransferSession) createMetadataFile() error {
 	if len(s.FileMetadata) == 0 {
-		return errors.New("no files have been described")
-	}
-	if err := s.createMetadataDir(); err != nil {
-		return fmt.Errorf("error using metadata dir: %s", err)
+		return nil
 	}
 	const path = "/metadata/metadata.json"
 	fd, err := s.fs.Create(path)
@@ -223,8 +254,65 @@ func (s *TransferSession) createMetadataDir() error {
 	return nil
 }
 
+func (s *TransferSession) createChecksumsFiles() error {
+	if err := s.ChecksumsMD5.Write(); err != nil {
+		return err
+	}
+	if err := s.ChecksumsSHA1.Write(); err != nil {
+		return err
+	}
+	if err := s.ChecksumsSHA256.Write(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // FileMetadata represents the metadata entry of a file (see `metadata.json`).
 type FileMetadata struct {
 	Filename string `json:"filename"`
 	DcTitle  string `json:"dc.title,omitempty"`
+}
+
+// ChecksumSet holds the checksums of the files for a sum algorithm.
+type ChecksumSet struct {
+	sumType string
+	values  map[string]string
+	fs      afero.Fs
+}
+
+func NewChecksumSet(sumType string, fs afero.Fs) *ChecksumSet {
+	return &ChecksumSet{
+		sumType: sumType,
+		values:  make(map[string]string),
+		fs:      fs,
+	}
+}
+
+func (c *ChecksumSet) Add(name, sum string) {
+	c.values[name] = sum
+}
+
+func (c *ChecksumSet) Write() error {
+	const (
+		path = "/metadata/checksum.%s"
+		sep  = ' '
+	)
+	if len(c.values) == 0 {
+		return nil
+	}
+	f, err := c.fs.Create(fmt.Sprintf(path, c.sumType))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	writer := csv.NewWriter(f)
+	writer.Comma = sep
+	writer.UseCRLF = false
+	defer writer.Flush()
+	for name, sum := range c.values {
+		if err := writer.Write([]string{sum, name}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

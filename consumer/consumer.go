@@ -80,10 +80,20 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	}
 	t.Describe(datasetMetadata(body))
 	for _, file := range body.Files {
-		name := getFilename(file.Path)
+		name := getFilename(file.StorageLocation)
 		if name == "" {
 			err = ErrInvalidFile
 			break
+		}
+		for _, c := range file.Checksums {
+			switch c.Type {
+			case "md5":
+				t.ChecksumMD5(name, c.Value)
+			case "sha1":
+				t.ChecksumSHA1(name, c.Value)
+			case "sha256":
+				t.ChecksumSHA256(name, c.Value)
+			}
 		}
 		// Using an anonymous function so I can use defer inside this loop.
 		var iErr error
@@ -99,14 +109,14 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				return
 			}
 			defer f.Close()
-			c.logger.Debugf("Saving %s into %s", file.Path, f.Name())
-			n, err = c.s3.Download(c.ctx, f, file.Path)
+			c.logger.Debugf("Saving %s into %s", file.StorageLocation, f.Name())
+			n, err = c.s3.Download(c.ctx, f, file.StorageLocation)
 			if err != nil {
 				iErr = err
-				c.logger.Errorf("Error downloading %s: %v", file.Path, err)
+				c.logger.Errorf("Error downloading %s: %v", file.StorageLocation, err)
 				return
 			}
-			c.logger.Debugf("%d bytes written", n)
+			c.logger.Debugf("Downloaded %s - %d bytes written", file.StorageLocation, n)
 			t.DescribeFile(name, fileMetadata(name, file))
 		}()
 		if iErr != nil {
@@ -133,6 +143,6 @@ func datasetMetadata(f *message.MetadataCreateRequest) *amclient.FileMetadata {
 func fileMetadata(name string, f *message.MetadataFile) *amclient.FileMetadata {
 	return &amclient.FileMetadata{
 		Filename: "objects/" + name,
-		DcTitle:  f.Title,
+		DcTitle:  f.Label,
 	}
 }

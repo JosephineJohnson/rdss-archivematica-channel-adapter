@@ -101,12 +101,12 @@ func TestValidCreateMetadataMessage(t *testing.T) {
 		Title: "Research about birds in Doñana National Park",
 		Files: []*message.MetadataFile{
 			&message.MetadataFile{
-				ID:   "One",
-				Path: "s3://bucket-01/one.mp3",
+				UUID:            "One",
+				StorageLocation: "s3://bucket-01/one.mp3",
 			},
 			&message.MetadataFile{
-				ID:   "Two",
-				Path: "s3://bucket-01/two.wav",
+				UUID:            "Two",
+				StorageLocation: "s3://bucket-01/two.wav",
 			},
 		},
 	}
