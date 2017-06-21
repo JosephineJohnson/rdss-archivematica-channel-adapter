@@ -269,8 +269,14 @@ func (s *TransferSession) createChecksumsFiles() error {
 
 // FileMetadata represents the metadata entry of a file (see `metadata.json`).
 type FileMetadata struct {
-	Filename string `json:"filename"`
-	DcTitle  string `json:"dc.title,omitempty"`
+	Filename      string `json:"filename"`
+	DcIdentifier  string `json:"dc.identifier,omitempty"`
+	DcTitle       string `json:"dc.title,omitempty"`
+	DcContributor string `json:"dc.contributor,omitempty"`
+	DcPublisher   string `json:"dc.publisher,omitempty"`
+	DcTermsIssued string `json:"dcterms.issued,omitempty"`
+	DcFormat      string `json:"dc.format,omitempty"`
+	DcType        string `json:"dc.type,omitempty"`
 }
 
 // ChecksumSet holds the checksums of the files for a sum algorithm.

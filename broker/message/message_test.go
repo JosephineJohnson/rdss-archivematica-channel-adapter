@@ -38,6 +38,31 @@ const (
 				"fileStorageLocation": "s3://bucketfoo/keybar.awe",
 				"fileStorageType": "s3"
 			}
+		],
+		"objectIdentifier": [
+			{
+				"objectIdentifierValue": "Identifier value",
+				"objectIdentifierType": "Identifier type"
+			}
+		],
+		"objectDate": [
+			{
+				"dateValue": "2016",
+				"dateType": "published"
+			}
+		],
+		"objectResourceType": "Research type",
+		"objectPublisher": [
+			{
+				"organisationRole": [
+					{
+						"organisation": {
+							"organisationName": "Organisation name"
+						},
+						"string": "publisher"
+					}
+				]
+			}
 		]
 	}
 }`
@@ -165,6 +190,31 @@ func TestToJSON(t *testing.T) {
 					UUID:        "f4fe4ff2-d9a3-11e6-bf26-cec0c932ce01",
 					Title:       "A Sample Dataset",
 					Description: "Description of the research object",
+					Type:        "Research type",
+					Dates: []*ResearchObjectDate{
+						{
+							Type:  "published",
+							Value: "2016",
+						},
+					},
+					Identifiers: []*ResearchObjectIdentifier{
+						{
+							Type:  "Identifier type",
+							Value: "Identifier value",
+						},
+					},
+					Publishers: []*ResearchObjectPublisher{
+						{
+							OrganisationRole: []*ResearchObjectPublisherOrganisationRole{
+								{
+									Organisation: &ResearchObjectPublisherOrganisation{
+										Name: "Organisation name",
+									},
+									Role: "publisher",
+								},
+							},
+						},
+					},
 					Files: []*MetadataFile{
 						{
 							UUID:            "baf0f6bc-3588-4f14-b24e-55a1a1d91930",

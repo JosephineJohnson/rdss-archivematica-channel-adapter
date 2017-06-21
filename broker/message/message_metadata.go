@@ -9,10 +9,39 @@ import (
 // MetadataCreateRequest represents the body of the message.
 type MetadataCreateRequest struct {
 	// TODO: Embed Dataset
-	UUID        string          `json:"objectUuid"`
-	Title       string          `json:"objectTitle"`
-	Description string          `json:"objectDescription"`
-	Files       []*MetadataFile `json:"objectFile"`
+	UUID        string                      `json:"objectUuid"`
+	Title       string                      `json:"objectTitle"`
+	Description string                      `json:"objectDescription"`
+	Files       []*MetadataFile             `json:"objectFile"`
+	Identifiers []*ResearchObjectIdentifier `json:"objectIdentifier"`
+	Dates       []*ResearchObjectDate       `json:"objectDate"`
+	Type        string                      `json:"objectResourceType"`
+	Publishers  []*ResearchObjectPublisher  `json:"objectPublisher"`
+}
+
+type ResearchObjectIdentifier struct {
+	Value string `json:"objectIdentifierValue"`
+	Type  string `json:"objectIdentifierType"`
+}
+
+type ResearchObjectDate struct {
+	Value string `json:"dateValue"`
+	Type  string `json:"dateType"`
+}
+
+type ResearchObjectPublisher struct {
+	OrganisationRole []*ResearchObjectPublisherOrganisationRole `json:"organisationRole"`
+}
+
+type ResearchObjectPublisherOrganisationRole struct {
+	Organisation *ResearchObjectPublisherOrganisation `json:"organisation"`
+	Role         string                               `json:"string"`
+}
+
+type ResearchObjectPublisherOrganisation struct {
+	JiscID  int    `json:"organisationJiscId,omitempty"`
+	Name    string `json:"organisationName,omitempty"`
+	Address string `json:"organisationAddress,omitempty"`
 }
 
 // MetadataCreateRequest returns the body of the message.

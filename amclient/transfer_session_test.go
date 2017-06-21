@@ -239,7 +239,10 @@ func TestTransferSession_ChecksumSet(t *testing.T) {
 	set.Add("bird-sounds.mp3", "92c8ab01cecceb3bf0789c2cd8c7415a")
 	set.Add("woodpigeon-pic.jpg", "53a64110e067b14394c142c09571bea0")
 
-	want := `92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
+	want1 := `92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
+53a64110e067b14394c142c09571bea0 woodpigeon-pic.jpg
+`
+	want2 := `92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
 53a64110e067b14394c142c09571bea0 woodpigeon-pic.jpg
 `
 
@@ -251,7 +254,7 @@ func TestTransferSession_ChecksumSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	have := string(c)
-	if have != want {
-		t.Fatalf("Unexpected content; want:\n%s\ngot:\n%s", want, have)
+	if have != want1 || have != want2 {
+		t.Fatalf("Unexpected content:\n%s", have)
 	}
 }

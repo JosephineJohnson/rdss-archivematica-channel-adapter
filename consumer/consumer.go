@@ -134,15 +134,49 @@ func getFilename(path string) string {
 	return strings.TrimPrefix(u.Path, "/")
 }
 
+// datasetMetadata maps properties from a research object into a CSV entry
+// (`amclient.FileMetadata`) in the `metadata.csv` file used in `amclient`.
 func datasetMetadata(f *message.MetadataCreateRequest) *amclient.FileMetadata {
-	return &amclient.FileMetadata{
-		DcTitle: f.Title,
+	entry := &amclient.FileMetadata{}
+
+	// dc.title
+	entry.DcTitle = f.Title
+
+	// dc.type
+	entry.DcType = f.Type
+
+	// dc.identifier
+	for _, item := range f.Identifiers {
+		entry.DcIdentifier = item.Value
+		break // TODO: we can't have multiple values for the same property atm
 	}
+
+	// dcterms.issued
+	for _, item := range f.Dates {
+		if item.Type != "published" {
+			continue
+		}
+		entry.DcTermsIssued = item.Value
+		break // TODO: we can't have multiple values for the same property atm
+	}
+
+	// dc.publisher
+	for _, item := range f.Publishers {
+		for _, itemOrgRoles := range item.OrganisationRole {
+			entry.DcPublisher = itemOrgRoles.Organisation.Name
+			break // TODO: we can't have multiple values for the same property atm
+		}
+	}
+
+	return entry
 }
 
+// fileMetadata maps properties from an intellectual asset into a CSV entry
+// (`amclient.FileMetadata`) in the `metadata.csv` file used in `amclient`.
 func fileMetadata(name string, f *message.MetadataFile) *amclient.FileMetadata {
 	return &amclient.FileMetadata{
-		Filename: "objects/" + name,
-		DcTitle:  f.Label,
+		Filename:     "objects/" + name,
+		DcIdentifier: f.Identifier,
+		DcTitle:      f.Name,
 	}
 }
