@@ -1,7 +1,6 @@
 package amclient
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/url"
@@ -104,67 +103,6 @@ func TestTransferSession_Contents(t *testing.T) {
 	}
 }
 
-func TestTransferSession_DescribeFile(t *testing.T) {
-	c := getClient(t)
-	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
-	sess, _ := NewTransferSession(c, "Test", fs)
-	entry := &FileMetadata{DcTitle: "Title"}
-	sess.DescribeFile("foobar", entry)
-
-	e, ok := sess.FileMetadata["foobar"]
-	if !ok {
-		t.Fatalf("The metadata entry was not added to the internal store")
-	}
-	if e != entry {
-		t.Fatalf("The metadata entry found in the internal store wasn't the expected")
-	}
-}
-
-func TestTransferSession_Describe(t *testing.T) {
-	c := getClient(t)
-	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
-	sess, _ := NewTransferSession(c, "Test", fs)
-	entry := &FileMetadata{DcTitle: "Title"}
-	sess.Describe(entry)
-
-	e, ok := sess.FileMetadata[objectsDirPrefix]
-	if !ok {
-		t.Fatalf("The metadata entry was not added to the internal store")
-	}
-	if e != entry {
-		t.Fatalf("The metadata entry found in the internal store wasn't the expected")
-	}
-}
-
-func TestTransferSession_createMetadataFile(t *testing.T) {
-	c := getClient(t)
-	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
-	sess, _ := NewTransferSession(c, "Test", fs)
-	sess.DescribeFile("foobar", &FileMetadata{Filename: "objects/foobar.jpg", DcTitle: "Title"})
-	sess.Describe(&FileMetadata{DcTitle: "Birds are in danger"})
-	sess.Start()
-
-	have, err := sess.fs.ReadFile("/metadata/metadata.json")
-	if err != nil {
-		t.Fatalf("Error reading /metadata/metadata.json")
-	}
-
-	want := []byte(`[
-	{
-		"filename": "objects/",
-		"dc.title": "Birds are in danger"
-	},
-	{
-		"filename": "objects/foobar.jpg",
-		"dc.title": "Title"
-	}
-]
-`)
-	if bytes.Compare(have, want) != 0 {
-		t.Fatalf("Unexpected contents found in metadata file; want: %s, have %s", want, have)
-	}
-}
-
 func TestTransferSession_createMetadataDir(t *testing.T) {
 	c := getClient(t)
 	fs := afero.NewBasePathFs(afero.NewMemMapFs(), "/")
@@ -233,18 +171,58 @@ func (ts *ts) Unapproved(ctx context.Context, req *TransferUnapprovedRequest) (*
 	}, &Response{}, nil
 }
 
+func TestTransferSession_MetadataSet(t *testing.T) {
+	fs := afero.Afero{Fs: afero.NewBasePathFs(afero.NewMemMapFs(), "/")}
+	set := NewMetadataSet(fs)
+	set.Add("objects/", "dc.contributor", "Zhang, Shiyu")
+	set.Add("objects/", "dc.contributor", "Whittow, William")
+	set.Add("objects/", "dc.contributor", "Seager, Rob")
+	set.Add("objects/", "dc.contributor", "Chauraya, Alford")
+	set.Add("objects/", "dc.contributor", "Vardaxoglou, Yiannis")
+	set.Add("objects/", "dc.identifier", "10.17028/rd.lboro.4665448.v1")
+	set.Add("objects/", "dc.publisher", "Loughborough University")
+	set.Add("objects/", "dc.title", "Non-uniform Mesh for Embroidered Microstrip Antennas - Simulation files")
+	set.Add("objects/", "dc.type", "Dataset")
+	set.Add("objects/", "dcterms.issued", "2017-03-17")
+	set.Add("objects/woodpigeon-pic.jpg", "dc.identifier", "1")
+	set.Add("objects/woodpigeon-pic.jpg", "dc.tile", "woodpigeon-pic.jpg")
+	set.Add("objects/bird-sounds.mp3", "dc.identifier", "2")
+	set.Add("objects/bird-sounds.mp3", "dc.title", "bird-sounds.mp3")
+
+	var (
+		want = `filename,dc.contributor,dc.contributor,dc.contributor,dc.contributor,dc.contributor,dc.identifier,dc.publisher,dc.tile,dc.title,dc.type,dcterms.issued
+objects/,"Zhang, Shiyu","Whittow, William","Seager, Rob","Chauraya, Alford","Vardaxoglou, Yiannis",10.17028/rd.lboro.4665448.v1,Loughborough University,,Non-uniform Mesh for Embroidered Microstrip Antennas - Simulation files,Dataset,2017-03-17
+objects/bird-sounds.mp3,,,,,,2,,,bird-sounds.mp3,,
+objects/woodpigeon-pic.jpg,,,,,,1,,woodpigeon-pic.jpg,,,
+`
+	)
+
+	if err := set.Write(); err != nil {
+		t.Fatal(err)
+	}
+	c, err := fs.ReadFile("/metadata/metadata.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	have := string(c)
+	if want != have {
+		t.Fatalf("Unexpected content:\nhave:\n%s\nwant:\n%s", have, want)
+	}
+}
 func TestTransferSession_ChecksumSet(t *testing.T) {
 	fs := afero.Afero{Fs: afero.NewBasePathFs(afero.NewMemMapFs(), "/")}
 	set := NewChecksumSet("md5", fs)
 	set.Add("bird-sounds.mp3", "92c8ab01cecceb3bf0789c2cd8c7415a")
 	set.Add("woodpigeon-pic.jpg", "53a64110e067b14394c142c09571bea0")
 
-	want1 := `92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
+	var (
+		want1 = `92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
 53a64110e067b14394c142c09571bea0 woodpigeon-pic.jpg
 `
-	want2 := `92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
-53a64110e067b14394c142c09571bea0 woodpigeon-pic.jpg
+		want2 = `53a64110e067b14394c142c09571bea0 woodpigeon-pic.jpg
+92c8ab01cecceb3bf0789c2cd8c7415a bird-sounds.mp3
 `
+	)
 
 	if err := set.Write(); err != nil {
 		t.Fatal(err)
@@ -254,7 +232,7 @@ func TestTransferSession_ChecksumSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	have := string(c)
-	if have != want1 || have != want2 {
-		t.Fatalf("Unexpected content:\n%s", have)
+	if want1 != have && want2 != have {
+		t.Fatalf("Unexpected content:\nhave:\n%s\nwant1:\n%s\nwant2:\n%s", have, want1, want2)
 	}
 }

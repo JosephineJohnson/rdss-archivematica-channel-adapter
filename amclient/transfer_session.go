@@ -3,10 +3,10 @@ package amclient
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"path"
@@ -34,8 +34,7 @@ type TransferSession struct {
 	fs   *afero.Afero
 	Path string
 
-	FileMetadata map[string]*FileMetadata
-
+	Metadata        *MetadataSet
 	ChecksumsMD5    *ChecksumSet
 	ChecksumsSHA1   *ChecksumSet
 	ChecksumsSHA256 *ChecksumSet
@@ -58,11 +57,11 @@ func NewTransferSession(c *Client, name string, depositFs afero.Fs) (*TransferSe
 		if err == nil {
 			fs := afero.NewBasePathFs(depositFs, nName)
 			ts := &TransferSession{
-				c:            c,
-				fs:           &afero.Afero{Fs: fs},
-				Path:         afero.FullBaseFsPath(fs.(*afero.BasePathFs), "/"),
-				FileMetadata: make(map[string]*FileMetadata),
+				c:    c,
+				fs:   &afero.Afero{Fs: fs},
+				Path: afero.FullBaseFsPath(fs.(*afero.BasePathFs), "/"),
 			}
+			ts.Metadata = NewMetadataSet(ts.fs)
 			ts.ChecksumsMD5 = NewChecksumSet("md5", ts.fs)
 			ts.ChecksumsSHA1 = NewChecksumSet("sha1", ts.fs)
 			ts.ChecksumsSHA256 = NewChecksumSet("sha256", ts.fs)
@@ -128,7 +127,7 @@ func (s *TransferSession) Start() error {
 		return err
 	}
 
-	if err := s.createMetadataFile(); err != nil {
+	if err := s.Metadata.Write(); err != nil {
 		return err
 	}
 
@@ -192,15 +191,14 @@ func (s *TransferSession) Contents() []string {
 
 // DescribeFile registers metadata of a file. It causes the transfer to include
 // a `metadata.json` file with the metadata of each file described.
-func (s *TransferSession) DescribeFile(name string, m *FileMetadata) {
-	s.FileMetadata[name] = m
+func (s *TransferSession) DescribeFile(name, field, value string) {
+	s.Metadata.Add(name, field, value)
 }
 
 // Describe registers metadata of the whole dataset/transfer. It causes the
 // transfer to include a `metadata.json` file with the metadata included.
-func (s *TransferSession) Describe(m *FileMetadata) {
-	m.Filename = objectsDirPrefix
-	s.FileMetadata[objectsDirPrefix] = m
+func (s *TransferSession) Describe(field, value string) {
+	s.Metadata.Add("objects/", field, value)
 }
 
 // ChecksumMD5 registers a MD5 checksum for a file.
@@ -216,34 +214,6 @@ func (s *TransferSession) ChecksumSHA1(name, sum string) {
 // ChecksumSHA256 registers a SHA256 checksum for a file.
 func (s *TransferSession) ChecksumSHA256(name, sum string) {
 	s.ChecksumsSHA256.Add(name, sum)
-}
-
-func (s *TransferSession) createMetadataFile() error {
-	if len(s.FileMetadata) == 0 {
-		return nil
-	}
-	const path = "/metadata/metadata.json"
-	fd, err := s.fs.Create(path)
-	defer fd.Close()
-	if err != nil {
-		return fmt.Errorf("error creating metadata.json: %s", err)
-	}
-	entries := make([]*FileMetadata, 0, len(s.FileMetadata))
-	// Let's try to add the main "objects/" entry first which is what the reader
-	// would probably expect when inspecting the `metadata.json` file.
-	if entry, ok := s.FileMetadata[objectsDirPrefix]; ok {
-		entries = append(entries, entry)
-		delete(s.FileMetadata, objectsDirPrefix)
-	}
-	for _, entry := range s.FileMetadata {
-		entries = append(entries, entry)
-	}
-	enc := json.NewEncoder(fd)
-	enc.SetIndent("", "\t")
-	if err := enc.Encode(entries); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *TransferSession) createMetadataDir() error {
@@ -267,16 +237,115 @@ func (s *TransferSession) createChecksumsFiles() error {
 	return nil
 }
 
-// FileMetadata represents the metadata entry of a file (see `metadata.json`).
-type FileMetadata struct {
-	Filename      string `json:"filename"`
-	DcIdentifier  string `json:"dc.identifier,omitempty"`
-	DcTitle       string `json:"dc.title,omitempty"`
-	DcContributor string `json:"dc.contributor,omitempty"`
-	DcPublisher   string `json:"dc.publisher,omitempty"`
-	DcTermsIssued string `json:"dcterms.issued,omitempty"`
-	DcFormat      string `json:"dc.format,omitempty"`
-	DcType        string `json:"dc.type,omitempty"`
+// MetadataSet holds the metadata entries of the transfer.
+type MetadataSet struct {
+	entries map[string][][2]string
+	fs      afero.Fs
+}
+
+// NewMetadataSet returns a new MetadataSet.
+func NewMetadataSet(fs afero.Fs) *MetadataSet {
+	return &MetadataSet{
+		entries: make(map[string][][2]string),
+		fs:      fs,
+	}
+}
+
+func (m *MetadataSet) Add(name, field, value string) {
+	m.entries[name] = append(m.entries[name], [2]string{field, value})
+}
+
+func (m *MetadataSet) Write() error {
+	const (
+		path = "/metadata/metadata.csv"
+		sep  = ','
+	)
+	if len(m.entries) == 0 {
+		return nil
+	}
+	f, err := m.fs.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	writer := csv.NewWriter(f)
+	writer.Comma = sep
+	writer.UseCRLF = false
+	defer writer.Flush()
+
+	// Build a list of fields with max. total of occurrences found
+	occurrences := map[string]int{}
+	for _, entry := range m.entries {
+		for _, pair := range entry { // Pair ("dc.title", "title 1")
+			var o int
+			for _, p := range entry {
+				if pair[0] == p[0] {
+					o++
+				}
+			}
+			if c, ok := occurrences[pair[0]]; !ok || (ok && o > c) {
+				occurrences[pair[0]] = o
+			}
+		}
+	}
+
+	// Build a list of fields
+	fields := []string{}
+	for field, o := range occurrences {
+		for i := 0; i < o; i++ {
+			fields = append(fields, field)
+		}
+	}
+	sort.Strings(fields)
+
+	// Write header row in CSV.
+	writer.Write(append([]string{"filename"}, fields...))
+
+	// Create an slice of filenames sorted alphabetically. We're going to use it
+	// so we can iterate over the files in order to generate CSV output in a
+	// predicable way.
+	names := make([]string, len(m.entries))
+	for filename := range m.entries {
+		names = append(names, filename)
+	}
+	sort.Strings(names)
+
+	for _, filename := range names {
+		entry, ok := m.entries[filename]
+		if !ok {
+			continue
+		}
+		var (
+			values  = []string{filename}
+			cursors = make(map[string]int)
+		)
+		// For each known field we either populate a value or an empty string.
+		for _, field := range fields {
+			var (
+				value  string
+				subset = entry
+				offset = 0
+			)
+			if pos, ok := cursors[field]; ok {
+				pos++
+				subset = entry[pos:] // Continue at the next value
+				offset = pos
+			}
+			for index, pair := range subset {
+				if pair[0] == field {
+					value = pair[1]                 // We have a match
+					cursors[field] = index + offset // Memorize position
+					break
+				}
+			}
+			values = append(values, value)
+		}
+		if len(values) > 1 {
+			writer.Write(values)
+		}
+	}
+
+	return nil
 }
 
 // ChecksumSet holds the checksums of the files for a sum algorithm.
@@ -315,10 +384,12 @@ func (c *ChecksumSet) Write() error {
 	writer.Comma = sep
 	writer.UseCRLF = false
 	defer writer.Flush()
+
 	for name, sum := range c.values {
 		if err := writer.Write([]string{sum, name}); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

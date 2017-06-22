@@ -9,39 +9,45 @@ import (
 // MetadataCreateRequest represents the body of the message.
 type MetadataCreateRequest struct {
 	// TODO: Embed Dataset
-	UUID        string                      `json:"objectUuid"`
-	Title       string                      `json:"objectTitle"`
-	Description string                      `json:"objectDescription"`
-	Files       []*MetadataFile             `json:"objectFile"`
-	Identifiers []*ResearchObjectIdentifier `json:"objectIdentifier"`
-	Dates       []*ResearchObjectDate       `json:"objectDate"`
-	Type        string                      `json:"objectResourceType"`
-	Publishers  []*ResearchObjectPublisher  `json:"objectPublisher"`
+	UUID         string              `json:"objectUUID"`
+	Title        string              `json:"objectTitle"`
+	Contributors []*PersonRole       `json:"objectContributor"`
+	Description  string              `json:"objectDescription"`
+	Dates        []*Date             `json:"objectDate"`
+	ResourceType string              `json:"objectResourceType"`
+	Identifiers  []*Identifier       `json:"objectIdentifier"`
+	Publishers   []*OrganisationRole `json:"objectPublisher"`
+	Files        []*File             `json:"objectFile,omitempty"`
 }
 
-type ResearchObjectIdentifier struct {
-	Value string `json:"objectIdentifierValue"`
-	Type  string `json:"objectIdentifierType"`
+type Identifier struct {
+	Value string `json:"identifierValue"`
+	Type  string `json:"identifierType"`
 }
 
-type ResearchObjectDate struct {
+type Date struct {
 	Value string `json:"dateValue"`
 	Type  string `json:"dateType"`
 }
 
-type ResearchObjectPublisher struct {
-	OrganisationRole []*ResearchObjectPublisherOrganisationRole `json:"organisationRole"`
+type OrganisationRole struct {
+	Organisation *Organisation `json:"Organisation"`
+	Role         string        `json:"Role"`
 }
 
-type ResearchObjectPublisherOrganisationRole struct {
-	Organisation *ResearchObjectPublisherOrganisation `json:"organisation"`
-	Role         string                               `json:"string"`
+type Organisation struct {
+	Name    string `json:"organisationName"`
+	Address string `json:"organisationAddress"`
 }
 
-type ResearchObjectPublisherOrganisation struct {
-	JiscID  int    `json:"organisationJiscId,omitempty"`
-	Name    string `json:"organisationName,omitempty"`
-	Address string `json:"organisationAddress,omitempty"`
+type PersonRole struct {
+	Person *Person `json:"Person"`
+	Role   string  `json:"Role"`
+}
+
+type Person struct {
+	UUID      string `json:"personUUID"`
+	GivenName string `json:"personGivenName"`
 }
 
 // MetadataCreateRequest returns the body of the message.
@@ -72,10 +78,10 @@ func (m Message) MetadataReadRequest() (*MetadataReadRequest, error) {
 // MetadataReadResponse represents the body of the message.
 type MetadataReadResponse struct {
 	// TODO: Embed Dataset
-	UUID        string          `json:"objectUuid"`
-	Title       string          `json:"objectTitle"`
-	Description string          `json:"objectDescription"`
-	Files       []*MetadataFile `json:"objectFile"`
+	UUID        string  `json:"objectUuid"`
+	Title       string  `json:"objectTitle"`
+	Description string  `json:"objectDescription"`
+	Files       []*File `json:"objectFile"`
 }
 
 // MetadataReadResponse returns the body of the message.
@@ -92,10 +98,10 @@ func (m Message) MetadataReadResponse() (*MetadataReadResponse, error) {
 // MetadataUpdateRequest represents the body of the message.
 type MetadataUpdateRequest struct {
 	// TODO: Embed Dataset
-	UUID        string          `json:"objectUuid"`
-	Title       string          `json:"objectTitle"`
-	Description string          `json:"objectDescription"`
-	Files       []*MetadataFile `json:"objectFile"`
+	UUID        string  `json:"objectUuid"`
+	Title       string  `json:"objectTitle"`
+	Description string  `json:"objectDescription"`
+	Files       []*File `json:"objectFile"`
 }
 
 // MetadataUpdateRequest returns the body of the message.
@@ -125,21 +131,20 @@ func (m Message) MetadataDeleteRequest() (*MetadataDeleteRequest, error) {
 
 // Subtypes
 
-type MetadataFile struct {
-	UUID            string                 `json:"fileUuid"`
-	Identifier      string                 `json:"fileIdentifier"`
-	Name            string                 `json:"fileName"`
-	Size            int                    `json:"fileSize"`
-	Checksums       []MetadataFileChecksum `json:"fileChecksum"`
-	Label           string                 `json:"fileLabel"`
-	HasMimeType     bool                   `json:"fileHasMimeType"`
-	FormatType      string                 `json:"fileFormatType"`
-	StorageLocation string                 `json:"fileStorageLocation"`
-	StorageType     string                 `json:"fileStorageType"`
+type File struct {
+	UUID            string     `json:"fileUUID"`
+	Identifier      string     `json:"fileIdentifier"`
+	Name            string     `json:"fileName"`
+	Size            int        `json:"fileSize"`
+	Label           string     `json:"fileLabel,omitempty"`
+	Checksums       []Checksum `json:"fileChecksum"`
+	FormatType      string     `json:"fileFormatType,omitempty"`
+	HasMimeType     bool       `json:"filehasMimeType,omitempty"`
+	StorageLocation string     `json:"fileStorageLocation"`
+	StorageType     string     `json:"fileStorageType"`
 }
 
-type MetadataFileChecksum struct {
-	UUID  string `json:"checksumUuid"`
+type Checksum struct {
 	Type  string `json:"checksumType"`
 	Value string `json:"checksumValue"`
 }

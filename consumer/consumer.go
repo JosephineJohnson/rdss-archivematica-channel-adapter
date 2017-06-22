@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -78,7 +79,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	if err != nil {
 		c.logger.Warningf("Failed to download `automated` processing configuration: %s", err)
 	}
-	t.Describe(datasetMetadata(body))
+	describeDataset(t, body)
 	for _, file := range body.Files {
 		name := getFilename(file.StorageLocation)
 		if name == "" {
@@ -117,7 +118,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				return
 			}
 			c.logger.Debugf("Downloaded %s - %d bytes written", file.StorageLocation, n)
-			t.DescribeFile(name, fileMetadata(name, file))
+			describeFile(t, name, file)
 		}()
 		if iErr != nil {
 			return iErr
@@ -134,49 +135,39 @@ func getFilename(path string) string {
 	return strings.TrimPrefix(u.Path, "/")
 }
 
-// datasetMetadata maps properties from a research object into a CSV entry
-// (`amclient.FileMetadata`) in the `metadata.csv` file used in `amclient`.
-func datasetMetadata(f *message.MetadataCreateRequest) *amclient.FileMetadata {
-	entry := &amclient.FileMetadata{}
+// describeDataset maps properties from a research object into a CSV entry
+// in the `metadata.csv` file used in `amclient`.
+func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateRequest) {
+	t.Describe("dc.title", f.Title)
+	t.Describe("dc.type", f.ResourceType)
 
-	// dc.title
-	entry.DcTitle = f.Title
-
-	// dc.type
-	entry.DcType = f.Type
-
-	// dc.identifier
 	for _, item := range f.Identifiers {
-		entry.DcIdentifier = item.Value
-		break // TODO: we can't have multiple values for the same property atm
+		t.Describe("dc.identifier", item.Value)
 	}
 
-	// dcterms.issued
 	for _, item := range f.Dates {
 		if item.Type != "published" {
 			continue
 		}
-		entry.DcTermsIssued = item.Value
-		break // TODO: we can't have multiple values for the same property atm
+		t.Describe("dcterms.issued", item.Value)
 	}
 
-	// dc.publisher
 	for _, item := range f.Publishers {
-		for _, itemOrgRoles := range item.OrganisationRole {
-			entry.DcPublisher = itemOrgRoles.Organisation.Name
-			break // TODO: we can't have multiple values for the same property atm
-		}
+		t.Describe("dc.publisher", item.Organisation.Name)
 	}
 
-	return entry
+	for _, item := range f.Contributors {
+		if item.Role != "dataCreator" {
+			continue
+		}
+		t.Describe("dc.contributor", item.Person.GivenName)
+	}
 }
 
-// fileMetadata maps properties from an intellectual asset into a CSV entry
-// (`amclient.FileMetadata`) in the `metadata.csv` file used in `amclient`.
-func fileMetadata(name string, f *message.MetadataFile) *amclient.FileMetadata {
-	return &amclient.FileMetadata{
-		Filename:     "objects/" + name,
-		DcIdentifier: f.Identifier,
-		DcTitle:      f.Name,
-	}
+// describeFile maps properties from an intellectual asset into a CSV entry
+// in the `metadata.csv` file used in `amclient`.
+func describeFile(t *amclient.TransferSession, name string, f *message.File) {
+	n := fmt.Sprintf("objects/%s", name)
+	t.DescribeFile(n, "dc.identifier", f.Identifier)
+	t.DescribeFile(n, "dc.title", f.Name)
 }

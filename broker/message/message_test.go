@@ -10,134 +10,105 @@ import (
 
 const (
 	metadataCreateRequest = `{
-	"messageHeader": {
-		"messageId": "e4bdaea0-4712-4682-8d4b-e6d92b1fe1ac",
-		"messageType": "MetadataCreate",
-		"messageClass": "Command"
-	},
-	"messageBody": {
-		"objectUuid": "f4fe4ff2-d9a3-11e6-bf26-cec0c932ce01",
-		"objectTitle": "A Sample Dataset",
-		"objectDescription": "Description of the research object",
-		"objectFile": [
-			{
-				"fileUuid": "baf0f6bc-3588-4f14-b24e-55a1a1d91930",
-				"fileIdentifier": "keybar",
-				"fileName": "keybar.awe",
-				"fileSize": 1024,
-				"fileChecksum": [
-					{
-						"checksumUuid": "cd7cb691-ac23-4a58-a875-c9988676448b",
-						"checksumType": "md5",
-						"checksumValue": "92c8ab01cecceb3bf0789c2cd8c7415a"
-					}
-				],
-				"fileLabel": "kb",
-				"fileHasMimeType": true,
-				"fileFormatType": "text",
-				"fileStorageLocation": "s3://bucketfoo/keybar.awe",
-				"fileStorageType": "s3"
-			}
-		],
-		"objectIdentifier": [
-			{
-				"objectIdentifierValue": "Identifier value",
-				"objectIdentifierType": "Identifier type"
-			}
-		],
-		"objectDate": [
-			{
-				"dateValue": "2016",
-				"dateType": "published"
-			}
-		],
-		"objectResourceType": "Research type",
-		"objectPublisher": [
-			{
-				"organisationRole": [
-					{
-						"organisation": {
-							"organisationName": "Organisation name"
-						},
-						"string": "publisher"
-					}
-				]
-			}
-		]
-	}
-}`
-
-	metadataReadRequest = `{
-	"messageHeader": {
-		"messageId": "8c1aec3b-426a-4a51-ad78-0213f093ac1c",
-		"messageType": "MetadataRead",
-		"messageClass": "Command"
-	},
-	"messageBody": {
-		"objectUuid": "a7e83002-29c1-11e7-93ae-92361f002671"
-	}
-}`
-
-	metadataReadResponse = `{
-	"messageHeader": {
-		"messageId": "9e8f3cfc-29c2-11e7-93ae-92361f002671",
-		"messageType": "MetadataRead",
-		"messageClass": "Command",
-		"correlationId": "8c1aec3b-426a-4a51-ad78-0213f093ac1c"
-	},
-	"messageBody": {
-		"objectUuid": "a7e83002-29c1-11e7-93ae-92361f002671",
-		"objectTitle": "Research about birds in the UK.",
-		"objectDescription": "Description of the research object",
-		"objectFile": [
-			{
-				"fileUuid": "ec2d4928-29c1-11e7-93ae-92361f002671",
-				"fileIdentifier": "bird-sounds",
-				"fileName": "bird-sounds.mp3",
-				"fileSize": 910616,
-				"fileChecksum": [
-					{
-						"checksumUuid": "cd7cb691-ac23-4a58-a875-c9988676448b",
-						"checksumType": "md5",
-						"checksumValue": "92c8ab01cecceb3bf0789c2cd8c7415a"
-					},
-					{
-						"checksumUuid": "739c6bcc-cdeb-4f40-a095-6d0d11f3df2b",
-						"checksumType": "sha256",
-						"checksumValue": "18de3c56ff1084b6234e4fe609af475db1fddd56d11975de041d95ea094dbcf4"
-					}
-				],
-				"fileLabel": "Bird sounds",
-				"fileHasMimeType": true,
-				"fileFormatType": "audio",
-				"fileStorageLocation": "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
-				"fileStorageType": "s3"
-			},
-			{
-				"fileUuid": "0dc88052-29c2-11e7-93ae-92361f002671",
-				"fileIdentifier": "woodpigeon-pic",
-				"fileName": "woodpigeon-pic.jpg",
-				"fileSize": 147004,
-				"fileChecksum": [
-					{
-						"checksumUuid": "9b2a5f85-d945-47e8-a410-02ee3d40b742",
-						"checksumType": "md5",
-						"checksumValue": "53a64110e067b14394c142c09571bea0"
-					},
-					{
-						"checksumUuid": "18068198-470a-46d6-9aeb-857c33ca54ef",
-						"checksumType": "sha256",
-						"checksumValue": "476fa2fbd34bc96e5ec86b7c5ad81a071f4cd35c59a9be5e21a528ac9e04f66e"
-					}
-				],
-				"fileLabel": "Woodpigeon pic",
-				"fileHasMimeType": true,
-				"fileFormatType": "image",
-				"fileStorageLocation": "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
-				"fileStorageType": "s3"
-			}
-		]
-	}
+  "messageHeader": {
+    "messageId": "e4bdaea0-4712-4682-8d4b-e6d92b1fe1ac",
+    "messageClass": "Command",
+    "messageType": "MetadataCreate"
+  },
+  "messageBody": {
+    "objectUUID": "06f75186-f9cb-4be3-8df7-64dd037eb54f",
+    "objectTitle": "Non-uniform Mesh for Embroidered Microstrip Antennas - Simulation files",
+    "objectContributor": [
+      {
+        "Person": {
+          "personUUID": "479dada4-8650-421e-8480-63d58107a998",
+          "personGivenName": "Zhang, Shiyu"
+        },
+        "Role": "dataCreator"
+      },
+      {
+        "Person": {
+          "personUUID": "b8102d3a-2c49-419c-aae4-312c2e08c3ce",
+          "personGivenName": "Whittow, William"
+        },
+        "Role": "dataCreator"
+      },
+      {
+        "Person": {
+          "personUUID": "b65be0c5-e451-4237-bc1e-abb1e5222c4d",
+          "personGivenName": "Seager, Rob"
+        },
+        "Role": "dataCreator"
+      },
+      {
+        "Person": {
+          "personUUID": "e51803fc-953b-4771-9e62-01a138d9303a",
+          "personGivenName": "Chauraya, Alford"
+        },
+        "Role": "dataCreator"
+      },
+      {
+        "Person": {
+          "personUUID": "34c6e333-c02a-4965-b0a2-5a1f80dedf22",
+          "personGivenName": "Vardaxoglou, Yiannis"
+        },
+        "Role": "dataCreator"
+      }
+    ],
+    "objectDescription": "The fileset contains simulation files of the non-uniform meshed patch antennas (using FDTD Empire XCcel). The conductor thickness and conductivity can be adjusted according to the conductive threads.",
+    "objectDate": [
+      {
+        "dateValue": "2017-03-17",
+        "dateType": "published"
+      }
+    ],
+    "objectResourceType": "Dataset",
+    "objectIdentifier": [
+      {
+        "identifierValue": "10.17028/rd.lboro.4665448.v1",
+        "identifierType": "DOI"
+      }
+    ],
+    "objectPublisher": [
+      {
+        "Organisation": {
+          "organisationName": "Loughborough University",
+          "organisationAddress": "Epinal Way, Loughborough LE11 3TU, UK"
+        },
+        "Role": "publisher"
+      }
+    ],
+    "objectFile": [
+      {
+        "fileUUID": "42143745-dba9-9c98-cdd7-0c521ae55118",
+        "fileIdentifier": "1",
+        "fileName": "woodpigeon-pic.jpg",
+        "fileSize": 147004,
+        "fileChecksum": [
+          {
+            "checksumType": "md5",
+            "checksumValue": "53a64110e067b14394c142c09571bea0"
+          }
+        ],
+        "fileStorageLocation": "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
+        "fileStorageType": "S3"
+      },
+      {
+        "fileUUID": "9102f719-2f78-d9c2-de12-15f27024f78b",
+        "fileIdentifier": "2",
+        "fileName": "bird-sounds.mp3",
+        "fileSize": 910616,
+        "fileChecksum": [
+          {
+            "checksumType": "md5",
+            "checksumValue": "92c8ab01cecceb3bf0789c2cd8c7415a"
+          }
+        ],
+        "fileStorageLocation": "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
+        "fileStorageType": "S3"
+      }
+    ]
+  }
 }`
 )
 
@@ -149,8 +120,6 @@ func TestFromJSON(t *testing.T) {
 		ebt  string // Expected underlying type of body
 	}{
 		{[]byte(metadataCreateRequest), TypeMetadataCreate, ClassCommand, "*message.MetadataCreateRequest"},
-		{[]byte(metadataReadRequest), TypeMetadataRead, ClassCommand, "*message.MetadataReadRequest"},
-		{[]byte(metadataReadResponse), TypeMetadataRead, ClassCommand, "*message.MetadataReadResponse"},
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%s_%s", tc.et, tc.ec), func(t *testing.T) {
@@ -183,113 +152,100 @@ func TestToJSON(t *testing.T) {
 			&Message{
 				Header: Headers{
 					ID:    "e4bdaea0-4712-4682-8d4b-e6d92b1fe1ac",
-					Type:  TypeMetadataCreate,
 					Class: ClassCommand,
+					Type:  TypeMetadataCreate,
 				},
 				Body: &MetadataCreateRequest{
-					UUID:        "f4fe4ff2-d9a3-11e6-bf26-cec0c932ce01",
-					Title:       "A Sample Dataset",
-					Description: "Description of the research object",
-					Type:        "Research type",
-					Dates: []*ResearchObjectDate{
+					UUID:  "06f75186-f9cb-4be3-8df7-64dd037eb54f",
+					Title: "Non-uniform Mesh for Embroidered Microstrip Antennas - Simulation files",
+					Contributors: []*PersonRole{
+						{
+							Person: &Person{
+								UUID:      "479dada4-8650-421e-8480-63d58107a998",
+								GivenName: "Zhang, Shiyu",
+							},
+							Role: "dataCreator",
+						},
+						{
+							Person: &Person{
+								UUID:      "b8102d3a-2c49-419c-aae4-312c2e08c3ce",
+								GivenName: "Whittow, William",
+							},
+							Role: "dataCreator",
+						},
+						{
+							Person: &Person{
+								UUID:      "b65be0c5-e451-4237-bc1e-abb1e5222c4d",
+								GivenName: "Seager, Rob",
+							},
+							Role: "dataCreator",
+						},
+						{
+							Person: &Person{
+								UUID:      "e51803fc-953b-4771-9e62-01a138d9303a",
+								GivenName: "Chauraya, Alford",
+							},
+							Role: "dataCreator",
+						},
+						{
+							Person: &Person{
+								UUID:      "34c6e333-c02a-4965-b0a2-5a1f80dedf22",
+								GivenName: "Vardaxoglou, Yiannis",
+							},
+							Role: "dataCreator",
+						},
+					},
+					Description: "The fileset contains simulation files of the non-uniform meshed patch antennas (using FDTD Empire XCcel). The conductor thickness and conductivity can be adjusted according to the conductive threads.",
+					Dates: []*Date{
 						{
 							Type:  "published",
-							Value: "2016",
+							Value: "2017-03-17",
 						},
 					},
-					Identifiers: []*ResearchObjectIdentifier{
+					ResourceType: "Dataset",
+					Identifiers: []*Identifier{
 						{
-							Type:  "Identifier type",
-							Value: "Identifier value",
+							Value: "10.17028/rd.lboro.4665448.v1",
+							Type:  "DOI",
 						},
 					},
-					Publishers: []*ResearchObjectPublisher{
+					Publishers: []*OrganisationRole{
 						{
-							OrganisationRole: []*ResearchObjectPublisherOrganisationRole{
+							Role: "publisher",
+							Organisation: &Organisation{
+								Name:    "Loughborough University",
+								Address: "Epinal Way, Loughborough LE11 3TU, UK",
+							},
+						},
+					},
+					Files: []*File{
+						{
+							UUID:       "42143745-dba9-9c98-cdd7-0c521ae55118",
+							Identifier: "1",
+							Name:       "woodpigeon-pic.jpg",
+							Size:       147004,
+							Checksums: []Checksum{
 								{
-									Organisation: &ResearchObjectPublisherOrganisation{
-										Name: "Organisation name",
-									},
-									Role: "publisher",
+									Type:  "md5",
+									Value: "53a64110e067b14394c142c09571bea0",
 								},
 							},
-						},
-					},
-					Files: []*MetadataFile{
-						{
-							UUID:            "baf0f6bc-3588-4f14-b24e-55a1a1d91930",
-							Identifier:      "keybar",
-							Name:            "keybar.awe",
-							Size:            1024,
-							Label:           "kb",
-							HasMimeType:     true,
-							FormatType:      "text",
-							StorageLocation: "s3://bucketfoo/keybar.awe",
-							StorageType:     "s3",
-							Checksums: []MetadataFileChecksum{
-								{UUID: "cd7cb691-ac23-4a58-a875-c9988676448b", Type: "md5", Value: "92c8ab01cecceb3bf0789c2cd8c7415a"},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			[]byte(metadataReadRequest),
-			&Message{
-				Header: Headers{
-					ID:    "8c1aec3b-426a-4a51-ad78-0213f093ac1c",
-					Type:  TypeMetadataRead,
-					Class: ClassCommand,
-				},
-				Body: &MetadataReadRequest{
-					UUID: "a7e83002-29c1-11e7-93ae-92361f002671",
-				},
-			},
-		},
-		{
-			[]byte(metadataReadResponse),
-			&Message{
-				Header: Headers{
-					ID:            "9e8f3cfc-29c2-11e7-93ae-92361f002671",
-					Type:          TypeMetadataRead,
-					Class:         ClassCommand,
-					CorrelationID: "8c1aec3b-426a-4a51-ad78-0213f093ac1c",
-				},
-				Body: &MetadataReadResponse{
-					UUID:        "a7e83002-29c1-11e7-93ae-92361f002671",
-					Title:       "Research about birds in the UK.",
-					Description: "Description of the research object",
-					Files: []*MetadataFile{
-						{
-							UUID:            "ec2d4928-29c1-11e7-93ae-92361f002671",
-							Identifier:      "bird-sounds",
-							Name:            "bird-sounds.mp3",
-							Size:            910616,
-							Label:           "Bird sounds",
-							HasMimeType:     true,
-							FormatType:      "audio",
-							StorageLocation: "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
-							StorageType:     "s3",
-							Checksums: []MetadataFileChecksum{
-								{UUID: "cd7cb691-ac23-4a58-a875-c9988676448b", Type: "md5", Value: "92c8ab01cecceb3bf0789c2cd8c7415a"},
-								{UUID: "739c6bcc-cdeb-4f40-a095-6d0d11f3df2b", Type: "sha256", Value: "18de3c56ff1084b6234e4fe609af475db1fddd56d11975de041d95ea094dbcf4"},
-							},
-						},
-						{
-							UUID:            "0dc88052-29c2-11e7-93ae-92361f002671",
-							Identifier:      "woodpigeon-pic",
-							Name:            "woodpigeon-pic.jpg",
-							Size:            147004,
-							Label:           "Woodpigeon pic",
-							HasMimeType:     true,
-							FormatType:      "image",
 							StorageLocation: "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
-							StorageType:     "s3",
-							Checksums: []MetadataFileChecksum{
-								{UUID: "9b2a5f85-d945-47e8-a410-02ee3d40b742", Type: "md5", Value: "53a64110e067b14394c142c09571bea0"},
-								{UUID: "18068198-470a-46d6-9aeb-857c33ca54ef", Type: "sha256", Value: "476fa2fbd34bc96e5ec86b7c5ad81a071f4cd35c59a9be5e21a528ac9e04f66e"},
+							StorageType:     "S3",
+						},
+						{
+							UUID:       "9102f719-2f78-d9c2-de12-15f27024f78b",
+							Identifier: "2",
+							Name:       "bird-sounds.mp3",
+							Size:       910616,
+							Checksums: []Checksum{
+								{
+									Type:  "md5",
+									Value: "92c8ab01cecceb3bf0789c2cd8c7415a",
+								},
 							},
+							StorageLocation: "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
+							StorageType:     "S3",
 						},
 					},
 				},
@@ -304,7 +260,7 @@ func TestToJSON(t *testing.T) {
 				t.Errorf("ToJSON failed %s", err)
 			}
 			var out bytes.Buffer
-			json.Indent(&out, data, "", "\t")
+			json.Indent(&out, data, "", "  ")
 
 			// Compare them
 			have := out.Bytes()

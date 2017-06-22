@@ -99,12 +99,12 @@ func TestValidCreateMetadataMessage(t *testing.T) {
 	body := &message.MetadataCreateRequest{
 		UUID:  "a90652dd-6abd-424c-b7ce-d6728c7f3f9f",
 		Title: "Research about birds in Doñana National Park",
-		Files: []*message.MetadataFile{
-			&message.MetadataFile{
+		Files: []*message.File{
+			&message.File{
 				UUID:            "One",
 				StorageLocation: "s3://bucket-01/one.mp3",
 			},
-			&message.MetadataFile{
+			&message.File{
 				UUID:            "Two",
 				StorageLocation: "s3://bucket-01/two.wav",
 			},

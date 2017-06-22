@@ -19,8 +19,8 @@ type Message struct {
 // Headers contains the message headers.
 type Headers struct {
 	ID            string `json:"messageId"`
-	Type          Type   `json:"messageType"`
 	Class         Class  `json:"messageClass"`
+	Type          Type   `json:"messageType"`
 	CorrelationID string `json:"correlationId,omitempty"`
 }
 
