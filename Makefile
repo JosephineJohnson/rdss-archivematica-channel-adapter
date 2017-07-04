@@ -9,6 +9,9 @@ tools:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
 build:
+	@env CGO_ENABLED=0 go build -a -o rdss-archivematica-channel-adapter .
+
+install:
 	@env CGO_ENABLED=0 go install $(PKGS)
 
 test:
