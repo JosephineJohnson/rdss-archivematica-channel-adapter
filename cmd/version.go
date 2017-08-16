@@ -16,5 +16,5 @@ var versionCmd = &cobra.Command{
 }
 
 func printVersion() {
-	fmt.Println("v0.0.1-alpha.1")
+	fmt.Println("v0.1.0")
 }
