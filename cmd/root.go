@@ -53,7 +53,10 @@ error = "error"
 # This adapter uses aws-sdk-go. The credentials must be defined using the
 # canonical environment variables, read more at https://goo.gl/xsWyS9.
 
-# client_name = "..."
+# Used by the consumer as the name of this application. Will be used as the name
+# of the Amazon DynamoDB tables which will store state.
+# app_name = "..."
+
 # region = "..."
 
 # Kinesis-specific configuration

@@ -31,14 +31,14 @@ const freq = 10 * time.Second
 
 func newProcessor(backend *BackendImpl, stream string) (p *processor, err error) {
 	p = &processor{
-		logger:  backend.logger.WithField("stream", stream),
+		logger:  backend.logger.WithField("stream", stream).WithField("app", backend.appName),
 		backend: backend,
 		stream:  stream,
 		quit:    make(chan struct{}),
 	}
 
 	kcfg := kinsumer.NewConfig().WithShardCheckFrequency(freq).WithLeaderActionFrequency(freq)
-	p.kinsumer, err = kinsumer.NewWithInterfaces(backend.Kinesis, backend.DynamoDB, stream, "rdss_am", backend.clientName, kcfg)
+	p.kinsumer, err = kinsumer.NewWithInterfaces(backend.Kinesis, backend.DynamoDB, stream, backend.appName, "rdss-archivematica-channel-adapter", kcfg)
 	if err != nil {
 		p.logger.Fatalln(err)
 		return nil, err

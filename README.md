@@ -44,22 +44,23 @@ The adapter is not configurable via command-line flags. You can choose between e
 
 The following is a list of supported environment variables. They need to be prefixed with the string `RDSS_ARCHIVEMATICA_ADAPTER_`, e.g. `RDSS_ARCHIVEMATICA_ADAPTER_LOGGING.LEVEL=INFO`. Notice that the dot is used to separate nested attributes.
 
-| String                             | Default              |
-| ---------------------------------- | -------------------- |
-| `LOGGING.LEVEL`                    | `INFO`               |
-| `AMCLIENT.URL`                     | ``                   |
-| `AMCLIENT.USER`                    | ``                   |
-| `AMCLIENT.KEY`                     | ``                   |
-| `PUBLISHER.LISTEN`                 | `0.0.0.0:8000`       |
-| `PUBLISHER.TLS`                    | `false`              |
-| `PUBLISHER.TLS_CERT_FILE`          | ``                   |
-| `PUBLISHER.TLS_KEY_FILE`           | ``                   |
-| `BROKER.BACKEND`                   | `kinesis`            |
-| `BROKER.QUEUES.MAIN`               | `main`               |
-| `BROKER.QUEUES.INVALID`            | `invalid`            |
-| `BROKER.QUEUES.ERROR`              | `error`              |
-| `BROKER.KINESIS.ENDPOINT`          | ``                   |
-| `BROKER.KINESIS.DYNAMODB_ENDPOINT` | ``                   |
+|               String               |    Default     |
+| ---------------------------------- | -------------- |
+| `LOGGING.LEVEL`                    | `INFO`         |
+| `AMCLIENT.URL`                     | ``             |
+| `AMCLIENT.USER`                    | ``             |
+| `AMCLIENT.KEY`                     | ``             |
+| `PUBLISHER.LISTEN`                 | `0.0.0.0:8000` |
+| `PUBLISHER.TLS`                    | `false`        |
+| `PUBLISHER.TLS_CERT_FILE`          | ``             |
+| `PUBLISHER.TLS_KEY_FILE`           | ``             |
+| `BROKER.BACKEND`                   | `kinesis`      |
+| `BROKER.QUEUES.MAIN`               | `main`         |
+| `BROKER.QUEUES.INVALID`            | `invalid`      |
+| `BROKER.QUEUES.ERROR`              | `error`        |
+| `BROKER.KINESIS.ENDPOINT`          | ``             |
+| `BROKER.KINESIS.DYNAMODB_ENDPOINT` | ``             |
+| `BROKER.KINESIS.APP_NAME`          | `rdss_am`      |
 
 ### Configuration file
 

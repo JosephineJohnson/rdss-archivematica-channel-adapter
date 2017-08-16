@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/util"
 )
 
 // New returns a kinesis backend with the corresponding AWS config initialized.
@@ -30,11 +29,7 @@ func New(opts *backend.Opts) (backend.Backend, error) {
 
 		Kinesis:  getKinesisInstance(opts),
 		DynamoDB: getDynamoDBInstance(opts),
-	}
-
-	b.clientName = opts.Opts["client-name"]
-	if b.clientName == "" {
-		b.clientName = util.GenId(10)
+		appName:  opts.Opts["app-name"],
 	}
 
 	return b, nil
@@ -48,7 +43,7 @@ type BackendImpl struct {
 	logger log.FieldLogger
 
 	// Application name
-	clientName string
+	appName string
 
 	// AWS clients
 	Kinesis  kinesisiface.KinesisAPI

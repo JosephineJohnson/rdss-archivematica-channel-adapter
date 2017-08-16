@@ -52,6 +52,7 @@ func getBackend(t *testing.T) *BackendImpl {
 	backend := &BackendImpl{
 		logger:  logrus.New(),
 		Kinesis: myKinesis{},
+		appName: "rdss_am",
 		DynamoDB: myDynamo{mocks.NewMockDynamo([]string{
 			"rdss_am_clients",
 			"rdss_am_checkpoints",
