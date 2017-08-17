@@ -67,12 +67,15 @@ func server(cmd *cobra.Command, args []string) {
 		opts = append(opts, grpc.Creds(creds))
 	}
 
-	grpcServer := grpc.NewServer(opts...)
+	// Create the broker we're going to publish to
 	bo, err := makeBroker()
 	if err != nil {
 		logger.Fatalln(err)
 	}
+	// Create an RDSS server using the broker
 	rdssServer := publisher.MakeRdssServer(bo, logger)
+	// Register RPC server with RDSS via protobuf
+	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterRdssServer(grpcServer, rdssServer)
 
 	go func() {
@@ -106,15 +109,23 @@ func makeBroker() (*broker.Broker, error) {
 		opts     []backend.DialOpts
 		_        = viper.GetString("broker.kinesis.stream")
 		endpoint = viper.GetString("broker.kinesis.endpoint")
+		qM = viper.GetString("broker.queues.main")
+		qI = viper.GetString("broker.queues.invalid")
+		qE = viper.GetString("broker.queues.error")
 	)
+	// Set to use given endpoint if given
 	if endpoint != "" {
 		opts = append(opts, backend.WithKeyValue("endpoint", endpoint))
 	}
+
 	b, err := backend.Dial("kinesis", opts...)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return broker.New(b, logger, &broker.Config{QueueMain: "main", QueueError: "error", QueueInvalid: "invalid"})
+	return broker.New(b, logger, &broker.Config{
+		QueueMain: qM,
+		QueueError: qE,
+		QueueInvalid: qI})
 }
 
 func unaryInterceptor() grpc.UnaryServerInterceptor {
