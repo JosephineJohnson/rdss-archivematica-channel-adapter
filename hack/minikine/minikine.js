@@ -12,16 +12,16 @@ var envs = function (key, defaultValue) {
 }
 
 const SETTINGS = {
-  'port': envs('MINIKINE_PORT', 4567),
-  'region': envs('MINIKINE_REGION', 'eu-west-2'),
+  'port': process.env.MINIKINE_PORT || 4567,
+  'region': process.env.MINIKINE_REGION || 'eu-west-2',
 
   // So far RDSS has defined three streams in their Messaging API
-  'streamMain': envs('MINIKINE_STREAM_MAIN', 'main'),
-  'streamInvalid': envs('MINIKINE_STREAM_INVALID', 'invalid'),
-  'streamError': envs('MINIKINE_STREAM_ERROR', 'error'),
+  'streamMain': process.env.MINIKINE_STREAM_MAIN || 'main',
+  'streamInvalid': process.env.MINIKINE_STREAM_INVALID || 'invalid',
+  'streamError': process.env.MINIKINE_STREAM_ERROR || 'error',
 
   // The number of streams that each shard is going to have
-  'streamShards': envs('MINIKINE_STREAM_SHARDS', 4)
+  'streamShards': process.env.MINIKINE_STREAM_SHARDS || 4
 }
 
 // Set up credentials in AWS-SDK
