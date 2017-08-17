@@ -49,14 +49,15 @@ func Test_processor_route_ErrorHandling(t *testing.T) {
 }
 
 func getBackend(t *testing.T) *BackendImpl {
+	// Create backend with non-default app name and table names
 	backend := &BackendImpl{
 		logger:  logrus.New(),
 		Kinesis: myKinesis{},
-		appName: "rdss_am",
+		appName: "test_app_0",
 		DynamoDB: myDynamo{mocks.NewMockDynamo([]string{
-			"rdss_am_clients",
-			"rdss_am_checkpoints",
-			"rdss_am_metadata",
+			"test_app_0_clients",
+			"test_app_0_checkpoints",
+			"test_app_0_metadata",
 		})},
 	}
 	return backend

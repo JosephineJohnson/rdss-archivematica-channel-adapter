@@ -3,17 +3,9 @@ var dynalite = require('dynalite')
 
 var dynaliteServer = dynalite()
 
-var envs = function (key, defaultValue) {
-  if ('key' in process.env) {
-    return process.env[key]
-  } else {
-    return defaultValue
-  }
-}
-
 const SETTINGS = {
-  'port': envs('MINIKINE_PORT', 4567),
-  'region': envs('MINIKINE_REGION', 'eu-west-2'),
+  'port': process.env.MINIKINE_PORT || 4567,
+  'region': process.env.MINIKINE_REGION || 'eu-west-2',
 }
 
 // Set up credentials in AWS-SDK
