@@ -3,14 +3,6 @@ var kinesalite = require('kinesalite')
 
 var kinesaliteServer = kinesalite()
 
-var envs = function (key, defaultValue) {
-  if ('key' in process.env) {
-    return process.env[key]
-  } else {
-    return defaultValue
-  }
-}
-
 const SETTINGS = {
   'port': process.env.MINIKINE_PORT || 4567,
   'region': process.env.MINIKINE_REGION || 'eu-west-2',
