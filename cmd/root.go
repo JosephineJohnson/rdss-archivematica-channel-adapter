@@ -11,6 +11,7 @@ import (
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/cmd/consumer"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/cmd/publisher"
+	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/version"
 )
 
 const defaultConfig = `# RDSS Archivematica Channel Adapter
@@ -94,8 +95,8 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rdss-archivematica-channel-adapter.toml)")
 
-	RootCmd.AddCommand(consumer.Command(logger.WithFields(log.Fields{"cmd": "consumer"})))
-	RootCmd.AddCommand(publisher.Command(logger.WithFields(log.Fields{"cmd": "publisher"})))
+	RootCmd.AddCommand(consumer.Command(logger.WithFields(log.Fields{"cmd": "consumer", "version": version.VERSION})))
+	RootCmd.AddCommand(publisher.Command(logger.WithFields(log.Fields{"cmd": "publisher", "version": version.VERSION})))
 }
 
 // initConfig reads in config file and ENV variables if set.

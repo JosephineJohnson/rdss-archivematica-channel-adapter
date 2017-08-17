@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/version"
 )
 
 var versionCmd = &cobra.Command{
@@ -15,6 +17,11 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+func init() {
+	RootCmd.AddCommand(versionCmd)
+}
+
+
 func printVersion() {
-	fmt.Println("v0.1.1")
+	fmt.Println(version.VERSION)
 }

@@ -1,6 +1,8 @@
 PKGS?=$$(go list ./... | grep -v '/vendor/')
 FILES?=$$(find . -name '*.go' | grep -v vendor)
 
+VERSION := $(shell git describe --tags --always --dirty)
+
 default: test vet
 
 tools:
@@ -9,10 +11,12 @@ tools:
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
 build:
-	@env CGO_ENABLED=0 go build -a -o rdss-archivematica-channel-adapter .
+	@echo ${VERSION}
+	@env CGO_ENABLED=0 go build -ldflags "-X github.com/JiscRDSS/rdss-archivematica-channel-adapter/version.VERSION=${VERSION}" -a -o rdss-archivematica-channel-adapter .
 
 install:
-	@env CGO_ENABLED=0 go install $(PKGS)
+	@echo ${VERSION}
+	@env CGO_ENABLED=0 go install -ldflags "-X github.com/JiscRDSS/rdss-archivematica-channel-adapter/version.VERSION=${VERSION}" $(PKGS)
 
 test:
 	@go test -i $(PKGS)
