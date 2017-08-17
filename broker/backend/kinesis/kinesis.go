@@ -29,7 +29,7 @@ func New(opts *backend.Opts) (backend.Backend, error) {
 
 		Kinesis:  getKinesisInstance(opts),
 		DynamoDB: getDynamoDBInstance(opts),
-		appName:  opts.Opts["app-name"],
+		appName:  opts.Opts["app_name"],
 	}
 
 	return b, nil
@@ -141,10 +141,10 @@ func getDynamoDBInstance(opts *backend.Opts) dynamodbiface.DynamoDBAPI {
 	if region, ok := opts.Opts["region"]; ok {
 		config = config.WithRegion(region)
 	}
-	if endpoint, ok := opts.Opts["endpoint-dynamodb"]; ok {
+	if endpoint, ok := opts.Opts["endpoint_dynamodb"]; ok {
 		config = config.WithEndpoint(endpoint)
 	}
-	if tls, ok := opts.Opts["tls-dynamodb"]; ok {
+	if tls, ok := opts.Opts["tls_dynamodb"]; ok {
 		tls, err := strconv.ParseBool(tls)
 		if err == nil {
 			config = config.WithDisableSSL(!tls)
