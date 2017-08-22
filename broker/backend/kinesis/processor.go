@@ -8,7 +8,6 @@ import (
 	"github.com/twitchscience/kinsumer"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
-	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/errors"
 )
 
 // processor processes the data records from a Kinesis stream. In Kinesis, each
@@ -61,35 +60,27 @@ func (p *processor) consumeRecords() {
 		default:
 			record, err := p.kinsumer.Next()
 			if err != nil {
-				panic(err) // TODO: manage error
+				// TODO: this is currently unrecoverable state at the moment.
+				// The backend should attempt to launch a new processor when
+				// this is happening.
+				panic(err)
 			}
 			if p.closed {
 				return
 			}
-			err = p.route(record)
-			if err != nil {
-				p.backend.putError(err)
-			}
+			p.route(record)
 		}
 	}
 }
 
-// route handles the message to all the handlers and returns the latest error
-// captured in order to signal the caller that an error was produced.
-func (p *processor) route(data []byte) error {
+// route handles the message to all the handlers.
+func (p *processor) route(data []byte) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	var err error
+
 	for _, cb := range p.handlers {
-		rErr := cb(data)
-		if rErr != nil {
-			err = rErr
-		}
+		go cb(data)
 	}
-	if err != nil {
-		return &errors.Error{Err: err, Kind: errors.GENERR006}
-	}
-	return nil
 }
 
 func (p *processor) addHandler(cb backend.Handler) {

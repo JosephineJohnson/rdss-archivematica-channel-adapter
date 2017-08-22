@@ -6,34 +6,48 @@ import (
 	"strings"
 )
 
-// Class (messageClass), one of Command, Event or Document.
-type Class int
+// MessageHeader contains important metadata describing the Message itself,
+// including the type of Message, routing information, timings, sequencing, and
+// so forth.
+type MessageHeader struct {
+	ID               string           `json:"messageId"`
+	CorrelationID    string           `json:"correlationId,omitempty"`
+	MessageClass     MessageClass     `json:"messageClass"`
+	MessageType      MessageType      `json:"messageType"`
+	ReturnAddress    string           `json:"returnAddress,omitempty"`
+	MessageTimings   MessageTimings   `json:"messageTimings"`
+	MessageSequence  MessageSequence  `json:"messageSequence"`
+	MessageHistory   []MessageHistory `json:"messageHistory,omitempty"`
+	Version          string           `json:"version"`
+	ErrorCode        string           `json:"errorCode,omitempty"`
+	ErrorDescription string           `json:"errorDescription,omitempty"`
+}
+
+// MessageClass is one of Command, Event or Document.
+type MessageClass int
 
 const (
-	ClassCommand Class = iota
-	ClassEvent
-	ClassDocument
+	MessageClassCommand MessageClass = iota
+	MessageClassEvent
+	MessageClassDocument
 )
 
 var (
-	classMap    map[string]Class
-	classMapInv map[Class]string
+	classMap = map[string]MessageClass{
+		"Command":  MessageClassCommand,
+		"Event":    MessageClassEvent,
+		"Document": MessageClassDocument,
+	}
+	classMapInv = make(map[MessageClass]string)
 )
 
 func init() {
-	classMap = map[string]Class{
-		"Command":  ClassCommand,
-		"Event":    ClassEvent,
-		"Document": ClassDocument,
-	}
-
-	classMapInv = make(map[Class]string)
 	for k, v := range classMap {
 		classMapInv[v] = k
 	}
 }
 
-func (c Class) String() string {
+func (c MessageClass) String() string {
 	v, ok := classMapInv[c]
 	if !ok {
 		return "Unknown"
@@ -41,14 +55,13 @@ func (c Class) String() string {
 	return v
 }
 
-// MarshalJSON implements Marshaler
-func (c Class) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("%s", c)
-	return json.Marshal(s)
+// MarshalJSON implements Marshaler.
+func (c MessageClass) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
 }
 
-// UnmarshalJSON implements unmarshaler
-func (c *Class) UnmarshalJSON(data []byte) error {
+// UnmarshalJSON implements Unmarshaler.
+func (c *MessageClass) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
@@ -61,36 +74,38 @@ func (c *Class) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Type (messageType) describes the type of Message.
-type Type int
+// MessageType describes the message type in the format of <Type><Operation> and
+// is described in the Message Body section.
+type MessageType int
 
 const (
-	TypeMetadataCreate Type = iota
-	TypeMetadataRead
-	TypeMetadataUpdate
-	TypeMetadataDelete
+	MessageTypeMetadataCreate MessageType = iota
+	MessageTypeMetadataRead
+	MessageTypeMetadataUpdate
+	MessageTypeMetadataDelete
+	MessageTypeVocabularyRead
+	MessageTypeVocabularyPatch
 )
 
 var (
-	typeMap    map[string]Type
-	typeMapInv map[Type]string
+	typeMap = map[string]MessageType{
+		"MetadataCreate":  MessageTypeMetadataCreate,
+		"MetadataRead":    MessageTypeMetadataRead,
+		"MetadataUpdate":  MessageTypeMetadataUpdate,
+		"MetadataDelete":  MessageTypeMetadataDelete,
+		"VocabularyRead":  MessageTypeVocabularyRead,
+		"VocabularyPatch": MessageTypeVocabularyPatch,
+	}
+	typeMapInv = make(map[MessageType]string)
 )
 
 func init() {
-	typeMap = map[string]Type{
-		"MetadataCreate": TypeMetadataCreate,
-		"MetadataRead":   TypeMetadataRead,
-		"MetadataUpdate": TypeMetadataUpdate,
-		"MetadataDelete": TypeMetadataDelete,
-	}
-
-	typeMapInv = make(map[Type]string)
 	for k, v := range typeMap {
 		typeMapInv[v] = k
 	}
 }
 
-func (t Type) String() string {
+func (t MessageType) String() string {
 	v, ok := typeMapInv[t]
 	if !ok {
 		return "Unknown"
@@ -99,15 +114,15 @@ func (t Type) String() string {
 }
 
 // MarshalJSON implements Marshaler
-func (t Type) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("%s", t)
+func (t MessageType) MarshalJSON() ([]byte, error) {
+	s := t.String()
 	s = strings.TrimSuffix(s, "Request")
 	s = strings.TrimSuffix(s, "Response")
 	return json.Marshal(s)
 }
 
 // UnmarshalJSON implements Unmarshaler
-func (t *Type) UnmarshalJSON(data []byte) error {
+func (t *MessageType) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
@@ -118,4 +133,21 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 	}
 	*t = v
 	return nil
+}
+
+type MessageTimings struct {
+	PublishedTimestamp  Timestamp `json:"publishedTimestamp"`
+	ExpirationTimestamp Timestamp `json:"expirationTimestamp,omitempty"`
+}
+
+type MessageSequence struct {
+	Sequence string `json:"sequence"`
+	Position int    `json:"position"`
+	Total    int    `json:"total"`
+}
+
+type MessageHistory struct {
+	MachineId      string    `json:"machineId"`
+	MachineAddress string    `json:"machineAddress"`
+	Timestamp      Timestamp `json:"timestamp"`
 }

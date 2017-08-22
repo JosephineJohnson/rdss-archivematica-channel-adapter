@@ -4,8 +4,8 @@ import (
 	"context"
 	"strconv"
 	"sync"
+	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
 )
@@ -57,7 +58,14 @@ type BackendImpl struct {
 var _ backend.Backend = (*BackendImpl)(nil)
 
 func (b *BackendImpl) Publish(topic string, data []byte) error {
-	return nil // TODO
+	now := time.Now()
+	input := &kinesis.PutRecordInput{
+		StreamName:   aws.String(topic),
+		Data:         data,
+		PartitionKey: aws.String(strconv.FormatInt(now.UnixNano(), 10)),
+	}
+	_, err := b.Kinesis.PutRecord(input)
+	return err
 }
 
 func (b *BackendImpl) Subscribe(topic string, cb backend.Handler) {
@@ -104,18 +112,6 @@ func (b *BackendImpl) Close() error {
 		p.stop()
 	}
 	return nil
-}
-
-// mError puts an erroneous message to the Error Message Queue.
-func (b *BackendImpl) putError(err error) {
-	b.logger.WithField("code", err).Errorln("Moving message to Error Message Queue")
-	return
-}
-
-// mInvalid puts an invalid message to the Invalid Message Queue.
-func (b *BackendImpl) putInvalid(r *kinesis.Record, err error) {
-	b.logger.WithField("code", err).Errorln("Moving message to Invalid Message Queue:", *r.SequenceNumber)
-	return
 }
 
 func getKinesisInstance(opts *backend.Opts) kinesisiface.KinesisAPI {

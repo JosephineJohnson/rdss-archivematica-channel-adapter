@@ -84,35 +84,44 @@ func start() {
 }
 
 func createBrokerClient() (*broker.Broker, error) {
-	var (
-		qM = viper.GetString("broker.queues.main")
-		qI = viper.GetString("broker.queues.invalid")
-		qE = viper.GetString("broker.queues.error")
-
-		opts          = []backend.DialOpts{}
-		backendConfig = map[string]string{
-			"app_name":          viper.GetString("broker.kinesis.app_name"),
-			"region":            viper.GetString("broker.kinesis.region"),
-			"tls":               viper.GetString("broker.kinesis.tls"),
-			"endpoint":          viper.GetString("broker.kinesis.endpoint"),
-			"tls_dynamodb":      viper.GetString("broker.kinesis.tls_dynamodb"),
-			"endpoint_dynamodb": viper.GetString("broker.kinesis.endpoint_dynamodb"),
-		}
-	)
+	// Our broker has a backend which we need to configure first.
+	backendConfig := map[string]string{
+		"app_name":          viper.GetString("broker.kinesis.app_name"),
+		"region":            viper.GetString("broker.kinesis.region"),
+		"tls":               viper.GetString("broker.kinesis.tls"),
+		"endpoint":          viper.GetString("broker.kinesis.endpoint"),
+		"tls_dynamodb":      viper.GetString("broker.kinesis.tls_dynamodb"),
+		"endpoint_dynamodb": viper.GetString("broker.kinesis.endpoint_dynamodb"),
+	}
 	// Set default app name if given value is blank
 	if backendConfig["app_name"] == "" {
 		backendConfig["app_name"] = "rdss_am"
 	}
-
+	var opts = []backend.DialOpts{}
 	for key, value := range backendConfig {
 		opts = append(opts, backend.WithKeyValue(key, value))
 	}
-
 	ba, err := backend.Dial("kinesis", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return broker.New(ba, logger, &broker.Config{QueueMain: qM, QueueInvalid: qI, QueueError: qE})
+
+	// Build broker config.
+	repoConfig := &broker.RepositoryConfig{Backend: viper.GetString("broker.repository.backend")}
+	brokerConfig := &broker.Config{
+		QueueMain:        viper.GetString("broker.queues.main"),
+		QueueInvalid:     viper.GetString("broker.queues.invalid"),
+		QueueError:       viper.GetString("broker.queues.error"),
+		RepositoryConfig: repoConfig,
+	}
+	if repoConfig.Backend == "dynamodb" {
+		repoConfig.DynamoDBEndpoint = viper.GetString("broker.repository.dynamodb_endpoint")
+		repoConfig.DynamoDBRegion = viper.GetString("broker.repository.dynamodb_region")
+		repoConfig.DynamoDBTable = viper.GetString("broker.repository.dynamodb_table")
+		repoConfig.DynamoDBTLS = viper.GetBool("broker.repository.dynamodb_tls")
+	}
+
+	return broker.New(ba, logger, brokerConfig)
 }
 
 func createAmClient() *amclient.Client {

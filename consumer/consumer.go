@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/amclient"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/message"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/s3"
-	"github.com/spf13/afero"
 )
 
 // Consumer is the component that subscribes to the broker and interacts with
@@ -52,7 +52,7 @@ func MakeConsumer(
 
 // Start implements Consumer
 func (c *ConsumerImpl) Start() {
-	c.broker.SubscribeType(message.TypeMetadataCreate, c.handleMetadataCreateRequest)
+	c.broker.SubscribeType(message.MessageTypeMetadataCreate, c.handleMetadataCreateRequest)
 
 	<-c.ctx.Done()
 	c.broker.Close()
@@ -67,11 +67,11 @@ var (
 // handleMetadataCreateRequest handles the reception of a Metadata Create
 // messages.
 func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
-	body, ok := msg.Body.(*message.MetadataCreateRequest)
+	body, ok := msg.MessageBody.(*message.MetadataCreateRequest)
 	if !ok {
 		return ErrUnpexpectedPayloadType
 	}
-	t, err := c.amc.TransferSession(body.Title, c.depositFs)
+	t, err := c.amc.TransferSession(body.ObjectTitle, c.depositFs)
 	if err != nil {
 		return err
 	}
@@ -80,20 +80,20 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 		c.logger.Warningf("Failed to download `automated` processing configuration: %s", err)
 	}
 	describeDataset(t, body)
-	for _, file := range body.Files {
-		name := getFilename(file.StorageLocation)
+	for _, file := range body.ObjectFile {
+		name := getFilename(file.FileStorageLocation)
 		if name == "" {
 			err = ErrInvalidFile
 			break
 		}
-		for _, c := range file.Checksums {
-			switch c.Type {
-			case "md5":
-				t.ChecksumMD5(name, c.Value)
-			case "sha1":
-				t.ChecksumSHA1(name, c.Value)
-			case "sha256":
-				t.ChecksumSHA256(name, c.Value)
+		for _, c := range file.FileChecksum {
+			switch c.ChecksumType {
+			case 1:
+				t.ChecksumMD5(name, c.ChecksumValue)
+			case 2:
+				t.ChecksumSHA1(name, c.ChecksumValue)
+			case 3:
+				t.ChecksumSHA256(name, c.ChecksumValue)
 			}
 		}
 		// Using an anonymous function so I can use defer inside this loop.
@@ -110,15 +110,15 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				return
 			}
 			defer f.Close()
-			c.logger.Debugf("Saving %s into %s", file.StorageLocation, f.Name())
-			n, err = c.s3.Download(c.ctx, f, file.StorageLocation)
+			c.logger.Debugf("Saving %s into %s", file.FileStorageLocation, f.Name())
+			n, err = c.s3.Download(c.ctx, f, file.FileStorageLocation)
 			if err != nil {
 				iErr = err
-				c.logger.Errorf("Error downloading %s: %v", file.StorageLocation, err)
+				c.logger.Errorf("Error downloading %s: %v", file.FileStorageLocation, err)
 				return
 			}
-			c.logger.Debugf("Downloaded %s - %d bytes written", file.StorageLocation, n)
-			describeFile(t, name, file)
+			c.logger.Debugf("Downloaded %s - %d bytes written", file.FileStorageLocation, n)
+			describeFile(t, name, &file)
 		}()
 		if iErr != nil {
 			return iErr
@@ -138,29 +138,28 @@ func getFilename(path string) string {
 // describeDataset maps properties from a research object into a CSV entry
 // in the `metadata.csv` file used in `amclient`.
 func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateRequest) {
-	t.Describe("dc.title", f.Title)
-	t.Describe("dc.type", f.ResourceType)
+	t.Describe("dc.title", f.ObjectTitle)
+	t.Describe("dc.type", f.ObjectResourceType.String())
 
-	for _, item := range f.Identifiers {
-		t.Describe("dc.identifier", item.Value)
+	for _, item := range f.ObjectIdentifier {
+		t.Describe("dc.identifier", item.IdentifierValue)
 	}
 
-	for _, item := range f.Dates {
-		if item.Type != "published" {
+	for _, item := range f.ObjectDate {
+		if item.DateType != message.DateTypeEnum_published {
 			continue
 		}
-		t.Describe("dcterms.issued", item.Value)
+		t.Describe("dcterms.issued", item.DateValue)
 	}
 
-	for _, item := range f.Publishers {
-		t.Describe("dc.publisher", item.Organisation.Name)
+	for _, item := range f.ObjectOrganisationRole {
+		t.Describe("dc.publisher", item.Organisation.OrganisationName)
 	}
-
-	for _, item := range f.Contributors {
-		if item.Role != "dataCreator" {
+	for _, item := range f.ObjectPersonRole {
+		if item.Role != message.PersonRoleEnum_dataCreator {
 			continue
 		}
-		t.Describe("dc.contributor", item.Person.GivenName)
+		t.Describe("dc.contributor", item.Person.PersonGivenName)
 	}
 }
 
@@ -168,6 +167,6 @@ func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateReque
 // in the `metadata.csv` file used in `amclient`.
 func describeFile(t *amclient.TransferSession, name string, f *message.File) {
 	n := fmt.Sprintf("objects/%s", name)
-	t.DescribeFile(n, "dc.identifier", f.Identifier)
-	t.DescribeFile(n, "dc.title", f.Name)
+	t.DescribeFile(n, "dc.identifier", f.FileIdentifier)
+	t.DescribeFile(n, "dc.title", f.FileName)
 }

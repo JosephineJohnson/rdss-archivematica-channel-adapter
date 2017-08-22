@@ -8,14 +8,15 @@ package broker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/pkg/errors"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
+	bErrors "github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/errors"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/message"
 )
 
@@ -25,12 +26,13 @@ type Broker struct {
 	logger  log.FieldLogger
 	config  *Config
 
-	Metadata MetadataService
-	// TODO: Vocabulary VocabularyService
-	// TODO: Term       TermService
+	Metadata   MetadataService
+	Vocabulary VocabularyService
+
+	repository Repository
 
 	// Number of messages received.
-	Count uint64
+	count uint64
 
 	// List of subscribers
 	subs []subscription
@@ -44,7 +46,7 @@ type subscription struct {
 	all bool
 
 	// The type of message that this subscriber is listening.
-	mType message.Type
+	mType message.MessageType
 
 	// The callback associated to this particular subscriber.
 	cb MessageHandler
@@ -69,7 +71,11 @@ func New(backend backend.Backend, logger log.FieldLogger, config *Config) (*Brok
 		logger:  logger,
 		config:  config,
 	}
+	if config.RepositoryConfig != nil {
+		b.repository = MustRepository(NewRepository(config.RepositoryConfig))
+	}
 	b.Metadata = &MetadataServiceOp{broker: b}
+	b.Vocabulary = &VocabularyServiceOp{broker: b}
 
 	// Check queues
 	if err := b.checkQueues(); err != nil {
@@ -82,30 +88,38 @@ func New(backend backend.Backend, logger log.FieldLogger, config *Config) (*Brok
 	return b, nil
 }
 
-// messageHandler is
+// messageHandler implents backend.Handler. It runs in a separate goroutine.
 func (b *Broker) messageHandler(data []byte) error {
-	// Unmarshal the message.
 	msg := &message.Message{}
 	err := json.Unmarshal(data, msg)
 	if err != nil {
-		b.logger.Errorln("Message received but unmarshalling failed:", err)
-		return err
+		b.queueInvalidMessage(data, bErrors.NewWithError(bErrors.GENERR001, err))
+		return nil
 	}
 
-	atomic.AddUint64(&b.Count, 1)
-	b.logger.WithFields(log.Fields{"count": b.Count, "type": msg.Header.Type}).Infoln("Message received")
+	if b.exists(msg) {
+		b.logger.Debugf("Message discarded (already seen): %s", msg.ID())
+		return nil
+	}
 
-	// Dispatch the message to the subscribers asynchronously.
-	var wg sync.WaitGroup
+	atomic.AddUint64(&b.count, 1)
+	b.logger.WithFields(log.Fields{"count": b.Count(), "type": msg.MessageHeader.MessageType}).Infoln("Message received")
+
+	// Dispatch the message to its subscribers in parallel. Block until they're
+	// all done and handle
+	var (
+		wg       sync.WaitGroup
+		appError error
+	)
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	for _, s := range b.subs {
-		if !s.all && msg.Header.Type != s.mType {
+		if !s.all && msg.MessageHeader.MessageType != s.mType {
 			continue
 		}
-		wg.Add(1)
 		// Here is our goroutine that is going to dispatch the message to each
 		// subscriber.
+		wg.Add(1)
 		go func(s subscription) {
 			defer wg.Done()
 			// We want to regain control of a panicking goroutine if that was
@@ -116,9 +130,8 @@ func (b *Broker) messageHandler(data []byte) error {
 					err = fmt.Errorf("recovered from panic in subscriber: %s", err)
 				}
 			}()
-			cbErr := s.cb(msg)
-			if cbErr != nil {
-				err = fmt.Errorf("handler returned error: %s", cbErr)
+			if handlerErr := s.cb(msg); handlerErr != nil {
+				appError = handlerErr
 			}
 		}(s)
 	}
@@ -126,29 +139,83 @@ func (b *Broker) messageHandler(data []byte) error {
 	// Wait until all the goroutines are done
 	wg.Wait()
 
+	if appError != nil {
+		b.queueErrorMessage(msg, appError)
+	}
+
 	return err
 }
 
+// exists returns whether the message is already in the repository. As a side
+// effect, the message is cached in the repo when it wasn't there so the second
+// time this function is called for the same message the returned value should
+// be true.
+func (b *Broker) exists(msg *message.Message) bool {
+	if item := b.repository.Get(msg.ID()); item != nil {
+		return true
+	}
+	if err := b.repository.Put(msg); err != nil {
+		b.logger.Error("Error trying to put the message in the local repository:", msg.ID())
+	}
+	return false
+}
+
 // checkQueues verifies access and availability of the queues being used.
-func (b *Broker) checkQueues() error {
-	var err error
-
-	if err = b.backend.Check(b.config.QueueMain); err != nil {
-		return err
+func (b *Broker) checkQueues() (err error) {
+	queues := []string{b.config.QueueMain, b.config.QueueError, b.config.QueueInvalid}
+	for _, queue := range queues {
+		if err = b.backend.Check(queue); err != nil {
+			return err
+		}
 	}
-	b.logger.WithField("queue", "main").Debugln("Queue check succeeded:", b.config.QueueMain)
+	return
+}
 
-	if err = b.backend.Check(b.config.QueueError); err != nil {
-		return err
+// handleErrMessage places a message on the Error Message Queue or the Invalid
+// Message Queue. The message is tagged with error headers before published.
+func (b *Broker) handleErrMessage(in interface{}, e error, queue string) {
+	if queue == "" {
+		return
 	}
-	b.logger.WithField("queue", "error").Debugln("Queue check succeeded:", b.config.QueueError)
 
-	if err = b.backend.Check(b.config.QueueInvalid); err != nil {
-		return err
+	logf := b.logger.WithFields(log.Fields{"messageId": "unknown", "target": queue, "err": e.Error()})
+	bErr, ok := e.(*bErrors.Error)
+	if ok {
+		logf = logf.WithFields(log.Fields{"code": bErr.Kind, "err": bErr.Err.Error()})
 	}
-	b.logger.WithField("queue", "invalid").Debugln("Queue check succeeded:", b.config.QueueInvalid)
 
-	return nil
+	var (
+		data []byte
+		err  error
+	)
+	switch msg := in.(type) {
+	case *message.Message:
+		logf = logf.WithFields(log.Fields{"messageId": msg.ID()})
+		msg.TagError(bErr)
+		data, err = msg.MarshalJSON()
+		if err != nil {
+			logf.Error("Error encoding message:", err)
+			return
+		}
+	case []byte:
+		data = msg
+	default:
+		logf.Error("Message ignored because its type is not recognized")
+		return
+	}
+
+	logf.Warnf("A message is being placed on the Error Message Queue (%s)", queue)
+	if err = b.backend.Publish(queue, data); err != nil {
+		logf.Error("The message could not be published: ", err)
+	}
+}
+
+func (b *Broker) queueInvalidMessage(in interface{}, bErr error) {
+	b.handleErrMessage(in, bErr, b.config.QueueInvalid)
+}
+
+func (b *Broker) queueErrorMessage(in interface{}, bErr error) {
+	b.handleErrMessage(in, bErr, b.config.QueueError)
 }
 
 // Subscribe creates a new subscription associated to every message received.
@@ -159,20 +226,30 @@ func (b *Broker) Subscribe(cb MessageHandler) {
 }
 
 // SubscribeType creates a new subscription associated to a particular message type.
-func (b *Broker) SubscribeType(t message.Type, cb MessageHandler) {
+func (b *Broker) SubscribeType(t message.MessageType, cb MessageHandler) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.subs = append(b.subs, subscription{mType: t, cb: cb})
 }
 
 // Request sends a fire-and-forget request to RDSS.
-func (b *Broker) Request(ctx context.Context, msg *message.Message) error {
-	return errors.New("not implemented yet")
+func (b *Broker) Request(_ context.Context, msg *message.Message) error {
+	data, err := msg.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	return b.backend.Publish(b.config.QueueMain, data)
 }
 
 // RequestResponse sends a request and waits until a response is received.
 func (b *Broker) RequestResponse(context.Context, *message.Message) (*message.Message, error) {
 	return nil, errors.New("not implemented yet")
+}
+
+// Count returns the total number of messages received by this broker since it
+// was executed.
+func (b *Broker) Count() uint64 {
+	return atomic.LoadUint64(&b.count)
 }
 
 func (b *Broker) Close() error {

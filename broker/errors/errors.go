@@ -1,6 +1,9 @@
 package errors
 
-import "fmt"
+import (
+	stderrors "errors"
+	"fmt"
+)
 
 // Error is the type that implements the error interface.
 type Error struct {
@@ -17,9 +20,11 @@ type Kind uint8
 
 // Kinds of errors.
 const (
+
 	//
 	// General Error Codes
 	//
+
 	GENERR001 Kind = iota // The Message Body is not in the expected format, for example mandatory fields are missing.
 	GENERR002             // The provided messageType is not supported.
 	GENERR003             // The expiration date of the Message had passed at the point at which delivery was attempted.
@@ -38,22 +43,15 @@ const (
 	// Metadata Error Codes
 	APPERRMET001 // Received a Metadata UPDATE with a datasetUuid that does not exist.
 	APPERRMET002 // Received a Metadata DELETE with a datasetUuid that does not exist.
+	APPERRMET003 // Received a Metadata READ with a datasetUuid that does not exist.
 
 	// Vocabulary Error Codes
-	APPERRVOC001 // Received a Vocabulary UPDATE with a vocabularyId that does not exist.
-	APPERRVOC002 // Received a Vocabulary DELETE with a vocabularyId that does not exist.
-
-	// Term Error Codes
-	APPERRTER001 // Received a Term UPDATE with a vocabularyId that does not exist.
-	APPERRTER002 // Received a Term UPDATE with a termId that does not exist in the given vocabularyId.
-	APPERRTER003 // Received a Term DELETE with a vocabularyId that does not exist.
-	APPERRTER004 // Received a Term DELETE with a termId that does not exist in the given voabularyId.
+	APPERRVOC002 // Received a Vocabulary READ with a vocabularyId that does not exist.
 )
 
-// Error implements error
-func (e *Error) Error() string {
-	var ret string
-	switch e.Kind {
+// String implements Stringer.
+func (k Kind) String() (ret string) {
+	switch k {
 	case GENERR001:
 		ret = "GENERR001"
 	case GENERR002:
@@ -79,21 +77,37 @@ func (e *Error) Error() string {
 		ret = "APPERRMET001"
 	case APPERRMET002:
 		ret = "APPERRMET002"
+	case APPERRMET003:
+		ret = "APPERRMET003"
 
-	case APPERRVOC001:
-		ret = "APPERRVOC001"
 	case APPERRVOC002:
 		ret = "APPERRVOC002"
-
-	case APPERRTER001:
-		ret = "APPERRTER001"
-	case APPERRTER002:
-		ret = "APPERRTER002"
-	case APPERRTER003:
-		ret = "APPERRTER003"
-	case APPERRTER004:
-		ret = "APPERRTER004"
 	}
 
-	return fmt.Sprintf("[%s] %s", ret, e.Err)
+	return
+}
+
+// Error implements error.
+func (e Error) Error() string {
+	return fmt.Sprintf("[%s]: %s", e.Kind, e.Err)
+}
+
+func New(k Kind, description string) error {
+	if k.String() == "" {
+		panic("unknown kind")
+	}
+	return &Error{
+		Kind: k,
+		Err:  stderrors.New(description),
+	}
+}
+
+func NewWithError(k Kind, err error) error {
+	if k.String() == "" {
+		panic("unknown kind")
+	}
+	return &Error{
+		Kind: k,
+		Err:  err,
+	}
 }

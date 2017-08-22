@@ -50,17 +50,16 @@ main = "main"
 invalid = "invalid"
 error = "error"
 
+[broker.repository]
+backend = "builtin"
+dynamodb_tls = true
+dynamodb_table = "rdss_am_messages"
+# dynamodb_endpoint = "https://127.0.0.1:4568"
+# dynamodb_region = "eu-west-2"
+
 [broker.kinesis]
-# This adapter uses aws-sdk-go. The credentials must be defined using the
-# canonical environment variables, read more at https://goo.gl/xsWyS9.
-
-# Used by the consumer as the name of this application. Will be used as the name
-# of the Amazon DynamoDB tables which will store state.
-# app_name = "..."
-
-# region = "..."
-
-# Kinesis-specific configuration
+app_name = "rdss_am"
+region = ""
 tls = true
 # endpoint = "https://127.0.0.1:4567"
 

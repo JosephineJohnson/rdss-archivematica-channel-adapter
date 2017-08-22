@@ -31,6 +31,7 @@ function bootstrap(dynamo) {
     'rdss_am_checkpoints': { 'key': 'Shard' },
     'rdss_am_clients': { 'key': 'ID' },
     'rdss_am_metadata': { 'key': 'Key' },
+    'rdss_am_messages': { 'key': 'ID' },
   }
   for (var prop in tables) {
     key = tables[prop].key

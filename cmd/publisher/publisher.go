@@ -126,7 +126,11 @@ func makeBroker() (*broker.Broker, error) {
 	return broker.New(b, logger, &broker.Config{
 		QueueMain:    qM,
 		QueueError:   qE,
-		QueueInvalid: qI})
+		QueueInvalid: qI,
+		RepositoryConfig: &broker.RepositoryConfig{
+			Backend: "dynamodb",
+		},
+	})
 }
 
 func unaryInterceptor() grpc.UnaryServerInterceptor {

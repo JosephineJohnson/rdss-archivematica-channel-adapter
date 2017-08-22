@@ -55,7 +55,12 @@ func tearUp() {
 		panic(err)
 	}
 	defer ba.Close()
-	br, err = broker.New(ba, logger, &broker.Config{QueueError: "f", QueueInvalid: "o", QueueMain: "o"})
+	br, err = broker.New(ba, logger, &broker.Config{
+		QueueError:       "f",
+		QueueInvalid:     "o",
+		QueueMain:        "o",
+		RepositoryConfig: &broker.RepositoryConfig{Backend: "builtin"},
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +77,7 @@ func tearUp() {
 	ctx, cancel = context.WithCancel(context.Background())
 
 	// Consumer with mocks
-	c := consumer.MakeConsumer(
+	c = consumer.MakeConsumer(
 		ctx,
 		logger,
 		br,
@@ -95,24 +100,26 @@ func tearDown() {
 
 func TestValidCreateMetadataMessage(t *testing.T) {
 	// Build message MetadataCreate
-	msg := message.New(message.TypeMetadataCreate, message.ClassCommand)
+	msg := message.New(message.MessageTypeMetadataCreate, message.MessageClassCommand)
 	body := &message.MetadataCreateRequest{
-		UUID:  "a90652dd-6abd-424c-b7ce-d6728c7f3f9f",
-		Title: "Research about birds in Doñana National Park",
-		Files: []*message.File{
-			&message.File{
-				UUID:            "One",
-				StorageLocation: "s3://bucket-01/one.mp3",
-			},
-			&message.File{
-				UUID:            "Two",
-				StorageLocation: "s3://bucket-01/two.wav",
+		ResearchObject: message.ResearchObject{
+			ObjectUuid:  "a90652dd-6abd-424c-b7ce-d6728c7f3f9f",
+			ObjectTitle: "Research about birds in Doñana National Park",
+			ObjectFile: []message.File{
+				message.File{
+					FileUUID:            "One",
+					FileStorageLocation: "s3://bucket-01/one.mp3",
+				},
+				message.File{
+					FileUUID:            "Two",
+					FileStorageLocation: "s3://bucket-01/two.wav",
+				},
 			},
 		},
 	}
-	msg.Body = body
+	msg.MessageBody = body
 
-	// Install our custom HTTP handler.
+	// Install our custom HTTP handlers
 	mux.HandleFunc("/api/transfer/start_transfer/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("Request method should be POST, got: %s", r.Method)
@@ -126,34 +133,61 @@ func TestValidCreateMetadataMessage(t *testing.T) {
 		}
 		defer r.Body.Close()
 
-		if len(msg.Paths) < len(body.Files) {
+		if len(msg.Paths) < len(body.ObjectFile) {
 			t.Errorf("Response does not include two files")
 		}
 
-		fmt.Println(body.Files)
+		fmt.Println(body.ObjectFile)
 
-		fmt.Fprint(w, `{"message": "Copy successful.", "path": "/foobar"`)
+		fmt.Fprint(w, `{"message": "Copy successful.", "path": "/foobar"}`)
+	})
+
+	mux.HandleFunc("/api/processing-configuration/automated/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{}`)
+	})
+
+	mux.HandleFunc("/api/transfer/approve/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{
+			"message": "Approval successful.",
+			"uuid": "a90652dd-6abd-424c-b7ce-d6728c7f3f9f"
+		}`)
+	})
+
+	mux.HandleFunc("/api/transfer/unapproved/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{
+			"message": "Fetched unapproved transfers successfully.",
+			"results": [{
+				"type": "standard",
+				"directory": "Research about birds in Doñana National Park",
+				"uuid": "a90652dd-6abd-424c-b7ce-d6728c7f3f9f"
+			}]
+		}`)
 	})
 
 	t.Run("Publish message", func(t *testing.T) {
 		data, err := json.Marshal(msg)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 
 		bmock := ba.(*backendmock.BackendImpl)
 		bmock.Publish("", data)
 
-		if br.Count != 1 {
-			t.Errorf("Backend does not count 1 message sent")
+		if br.Count() != 1 {
+			t.Fatal("Backend does not count 1 message sent")
 		}
 
 		const total = 4
 		for i := 1; i <= total; i++ {
+			// Create new messages so they have different messageIds, otherwise
+			// they won't be discarded as the local repository avoids delivering
+			// the same message more than once.
+			msg = message.New(message.MessageTypeMetadataRead, message.MessageClassCommand)
+			data, _ = json.Marshal(msg)
 			bmock.Publish("", data)
 		}
-		if br.Count != total+1 {
-			t.Errorf("Backend does not count 1 message sent")
+		if br.Count() != total+1 {
+			t.Fatal("Backend does not count 1 message sent")
 		}
 	})
 }
