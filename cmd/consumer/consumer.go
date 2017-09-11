@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -72,10 +73,10 @@ func start() {
 		quit <- struct{}{}
 	}()
 
-	// Subscribe to SIGINT signals and wait
-	stopChan := make(chan os.Signal)
-	signal.Notify(stopChan, os.Interrupt)
-	<-stopChan // Wait for SIGINT
+	// Subscribe to signals and wait
+	stopChan := make(chan os.Signal, 2)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+	<-stopChan // Block until a signal is received
 
 	logger.Info("Shutting down server...")
 	cancel()

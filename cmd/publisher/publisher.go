@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -83,10 +84,10 @@ func server(cmd *cobra.Command, args []string) {
 		grpcServer.Serve(lis)
 	}()
 
-	// Subscribe to SIGINT signals and wait
-	stopChan := make(chan os.Signal)
-	signal.Notify(stopChan, os.Interrupt)
-	<-stopChan // Wait for SIGINT
+	// Subscribe to signals and wait
+	stopChan := make(chan os.Signal, 2)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+	<-stopChan // Block until a signal is received
 
 	// Graceful shutdown with a timeout
 	logger.Info("Shutting down server...")
@@ -109,9 +110,9 @@ func makeBroker() (*broker.Broker, error) {
 		opts     []backend.DialOpts
 		_        = viper.GetString("broker.kinesis.stream")
 		endpoint = viper.GetString("broker.kinesis.endpoint")
-		qM = viper.GetString("broker.queues.main")
-		qI = viper.GetString("broker.queues.invalid")
-		qE = viper.GetString("broker.queues.error")
+		qM       = viper.GetString("broker.queues.main")
+		qI       = viper.GetString("broker.queues.invalid")
+		qE       = viper.GetString("broker.queues.error")
 	)
 	// Set to use given endpoint if given
 	if endpoint != "" {
@@ -123,8 +124,8 @@ func makeBroker() (*broker.Broker, error) {
 		log.Fatalln(err)
 	}
 	return broker.New(b, logger, &broker.Config{
-		QueueMain: qM,
-		QueueError: qE,
+		QueueMain:    qM,
+		QueueError:   qE,
 		QueueInvalid: qI})
 }
 
