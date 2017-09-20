@@ -21,17 +21,17 @@ level = "INFO"
 
 [amclient]
 # URL of the Archivematica Dashboard
-# url = "https://archivematica.internal:9000"
-# user = "demo"
-# key = "eid3Aitheijoo1ohce2pho4eiDei0lah"
+url = ""
+user = ""
+key = ""
 
 [s3]
 force_path_style = false
 insecure_skip_verify = false
-# endpoint = "https://127.0.0.1:4567"
-# access_key = "..."
-# secret_key = "..."
-# region = "..."
+endpoint = ""
+access_key = ""
+secret_key = ""
+region = ""
 
 [consumer]
 archivematica_transfer_deposit_dir = "/var/archivematica/sharedDirectory/watchedDirectories/activeTransfers/standardTransfer"
@@ -39,8 +39,8 @@ archivematica_transfer_deposit_dir = "/var/archivematica/sharedDirectory/watched
 [publisher]
 listen = "0.0.0.0:8000"
 tls = false
-# tls_cert_file = "/foo.crt"
-# tls_key_file = "/foo.key"
+tls_cert_file = ""
+tls_key_file = ""
 
 [broker]
 backend = "kinesis"
@@ -54,18 +54,16 @@ error = "error"
 backend = "builtin"
 dynamodb_tls = true
 dynamodb_table = "rdss_am_messages"
-# dynamodb_endpoint = "https://127.0.0.1:4568"
-# dynamodb_region = "eu-west-2"
+dynamodb_endpoint = ""
+dynamodb_region = ""
 
 [broker.kinesis]
 app_name = "rdss_am"
 region = ""
 tls = true
-# endpoint = "https://127.0.0.1:4567"
-
-# Dynamo-specific parameters
+endpoint = ""
 tls_dynamodb = true
-# endpoint_dynamodb = "https://127.0.0.1:4568"
+endpoint_dynamodb = ""
 `
 
 var (

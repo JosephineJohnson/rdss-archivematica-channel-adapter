@@ -10,6 +10,7 @@
   - [Environment variables](#environment-variables)
   - [Configuration file](#configuration-file)
 - [Reusability](#reusability)
+- [Profiling](#profiling)
 - [Diagram](#diagram)
 
 ## Introduction
@@ -42,74 +43,217 @@ The adapter is not configurable via command-line flags. You can choose between e
 
 ### Environment variables
 
-The following is a list of supported environment variables. They need to be prefixed with the string `RDSS_ARCHIVEMATICA_ADAPTER_`, e.g. `RDSS_ARCHIVEMATICA_ADAPTER_LOGGING.LEVEL=INFO`. Notice that the dot is used to separate nested attributes.
+The following is a list of supported environment variables. They need to be prefixed with the string `RDSS_ARCHIVEMATICA_ADAPTER_`, e.g. `RDSS_ARCHIVEMATICA_ADAPTER_LOGGING.LEVEL=DEBUG`. Notice that the dot is used to separate nested attributes.
 
-|               String               |    Default     |
-| ---------------------------------- | -------------- |
-| `LOGGING.LEVEL`                    | `INFO`         |
-| `AMCLIENT.URL`                     | ``             |
-| `AMCLIENT.USER`                    | ``             |
-| `AMCLIENT.KEY`                     | ``             |
-| `PUBLISHER.LISTEN`                 | `0.0.0.0:8000` |
-| `PUBLISHER.TLS`                    | `false`        |
-| `PUBLISHER.TLS_CERT_FILE`          | ``             |
-| `PUBLISHER.TLS_KEY_FILE`           | ``             |
-| `BROKER.BACKEND`                   | `kinesis`      |
-| `BROKER.QUEUES.MAIN`               | `main`         |
-| `BROKER.QUEUES.INVALID`            | `invalid`      |
-| `BROKER.QUEUES.ERROR`              | `error`        |
-| `BROKER.KINESIS.ENDPOINT`          | ``             |
-| `BROKER.KINESIS.DYNAMODB_ENDPOINT` | ``             |
-| `BROKER.KINESIS.APP_NAME`          | `rdss_am`      |
+`LOGGING.LEVEL`
+
+> Default: `"INFO"`
+
+All severity levels defined by [RFC 5424](https://tools.ietf.org/html/rfc5424) are supported.
+
+`AMCLIENT.URL`
+
+> Default: `""`
+
+Archivematica API - URL, e.g.: `"https://my.archivematica.internal:9000`.
+
+`AMCLIENT.USER`
+
+> Default: `""`
+
+Archivematica API - Username, e.g.:  `"demo"`.
+
+`AMCLIENT.KEY`
+
+> Default: `""`
+
+Archivematica API - Key, e.g.: `"eid3Aitheijoo1ohce2pho4eiDei0lah"`.
+
+`S3.FORCE_PATH_STYLE`
+
+> Default: `false`
+
+When set to `true`, the bucket name is always left in the request URL and never moved to the host as a sub-domain.
+
+`S3.INSECURE_SKIP_VERIFY`
+
+> Default: `false`
+
+When set to `true`, the client will skip the TLS verification process.
+
+`S3.ENDPOINT`
+
+> Default: `""`
+
+When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"https://127.0.0.1:4567"`.
+
+`S3.ACCESS_KEY`
+
+> Default: `""`
+
+When set to a non-empty string, it's combined with `S3.SECRET_KEY` to set up the static credential object.
+
+`S3.SECRET_KEY`
+
+> Default: `""`
+
+When set to a non-empty string, it's combined with `S3.ACCESS_KEY` to set up the static credential object.
+
+`S3.REGION`
+
+> Default: `""`
+
+AWS Region. If empty, the AWS SDK will throw an error. E.g.: `eu-west-2`.
+
+`CONSUMER.ARCHIVEMATICA_TRANSFER_DEPOSIT_DIR`
+
+> Default: `"/var/archivematica/sharedDirectory/watchedDirectories/activeTransfers/standardTransfer"`
+
+Location of the `standardTransfer` directory of the Archivematica pipeline.
+
+`PUBLISHER.LISTEN`
+
+> Default: `"0.0.0.0:8000"`
+
+Address of the gRPC server found in the publisher.
+
+`PUBLISHER.TLS`
+
+> Default: `false`
+
+When set to `true`, the gRPC server is built with the TLS integration enabled which is helpful if you want your clients to authenticate the server and encrypt all the data exchanged between the clients and the server.
+
+`PUBLISHER.TLS_CERT_FILE`
+
+> Default: `""`
+
+When `PUBLISHER.TLS` is set to `true`, this is used to describe the location of the public key of the X509 key pair. The file must contain PEM encoded data and it may contain intermediate certificates following the leaf certificate to form a certificate chain.
+
+`PUBLISHER.TLS_KEY_FILE`
+
+> Default: `""`
+
+When `PUBLISHER.TLS` is set to `true`, this is used to describe the location of the private key of the X509 key pair. The file must contain PEM encoded data.
+
+`BROKER.BACKEND`
+
+> Default: `"kinesis"`
+
+The name of the backend used as the RDSS broker. `"kinesis"` is the backend currently supported in addition to "backendmock"`, developed for testing purposes only.
+
+`BROKER.QUEUES.MAIN`
+
+> Default: `"main"`
+
+Name of the main message queue.
+
+`BROKER.QUEUES.INVALID`
+
+> Default: `"invalid"`
+
+Name of the invalid message queue.
+
+`BROKER.QUEUES.ERROR`
+
+> Default: `"error"`
+
+Name of the error message queue.
+
+`BROKER.REPOSITORY.BACKEND`
+
+> Default: `"builtin"`
+
+The [Local Data Repository](https://github.com/JiscRDSS/rdss-message-api-docs#local-data-repository) backend. The default (`"builtin"`) is a simple non-persisted hash in memory. A better alternative that can be shared by multiple consumers is the `dynamodb` backend which uses a single DynamoDB table.
+
+`BROKER.REPOSITORY.DYNAMODB_TLS`
+
+> Default: `true`
+
+When set to `true`, the client uses the TLS protocol to communicate securely with the server. If you are using a clone of DynamoDB like dynalite you may prefer to have it disabled.
+
+`BROKER.REPOSITORY.DYNAMODB_TABLE`
+
+> Default: ``""`
+
+The DynamoDB table name which must conform the [naming rules](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html#HowItWorks.NamingRules).
+
+`BROKER.REPOSITORY.DYNAMODB_ENDPOINT`
+
+> Default: `""`
+
+When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"http://127.0.0.1:9999"`.
+
+`BROKER.REPOSITORY.DYNAMODB_REGION`
+
+> Default: `""`
+
+AWS Region. If empty, the AWS SDK will throw an error. E.g.: `eu-west-2`.
+
+`BROKER.KINESIS.APP_NAME`
+
+> Default: `"rdss_am"`
+
+This is used to prefix the names of the DynamoDB tables used to share state across multiple consumers. If you are setting up more than one consumer remember to define the same value in all of them.
+
+`BROKER.KINESIS.REGION` 
+
+> Default: `""`
+
+AWS Region. If empty, the AWS SDK will throw an error. E.g.: `eu-west-2`.
+
+`BROKER.KINESIS.TLS`
+
+> Default: `true`
+
+When set to `true`, the client uses the TLS protocol to communicate securely with the server. If you are using a clone of DynamoDB like dynalite you may prefer to have it disabled.
+
+`BROKER.KINESIS.ENDPOINT`
+
+> Default: ``
+
+When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"http://127.0.0.1:4567"`.
+
+`BROKER.KINESIS.TLS_DYNAMODB`
+
+> Default: `true`
+
+When set to `true`, the client uses the TLS protocol to communicate securely with the server. If you are using a clone of DynamoDB like dynalite you may prefer to have it disabled.
+
+`BROKER.KINESIS.ENDPOINT_DYNAMODB`
+
+> Default: ``
+
+When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"http://127.0.0.1:9999"`.
+
 
 ### Configuration file
 
-The adapter will try to read config from `$HOME/.rdss-archivematica-channel-adapter.toml` and `/etc/archivematica/rdss-archivematica-channel-adapter.toml`. Alternatively, you can pass a different location with the global `--config string` flag.
+The adapter will try to read config in [TOML format](https://en.wikipedia.org/wiki/TOML) from `$HOME/.rdss-archivematica-channel-adapter.toml` and `/etc/archivematica/rdss-archivematica-channel-adapter.toml`. Alternatively, you can pass a different location with the global `--config string` flag.
 
 Notice how the environment variables in the previous section map to the nested configuration sections in the configuration file, e.g.:
 
 ```toml
-# RDSS Archivematica Channel Adapter
-
 [logging]
 level = "INFO"
 
 [amclient]
-url = "https://archivematica.internal:9000"
+url = "http://dadada"
 user = "demo"
-key = "eid3Aitheijoo1ohce2pho4eiDei0lah"
-
-[publisher]
-listen = "0.0.0.0:8000"
-tls = false
-tls_cert_file = "/foo.crt"
-tls_key_file = "/foo.key"
-
-[broker]
-backend = "kinesis"
-
-    [broker.kinesis]
-    # This adapter uses aws-sdk-go. The credentials must be defined using the
-    # canonical environment variables, read more at https://goo.gl/xsWyS9.
-
-    # The name of the Amazon Kinesis stream.
-    stream = "rdss-archivematica"
-
-    # Kinesis endpoint. It can be used when you want the client to speak to a
-    # server not run by AWS, e.g. a local kinesalite instance used during testing.
-    #endpoint = "https://127.0.0.1:4567"
+key = "12345"
 ```
 
 ## Code reusability
 
 A few Go packages found in this repository are agnostic to Archivematica and could be used by other vendors:
 
-- `github.com/JiscRDSS/rdss-archivematica-channel-adapter/amclient` is a Archivematica HTTP API client.
+- `github.com/JiscRDSS/rdss-archivematica-channel-adapter/amclient` is an Archivematica HTTP API client.
 - `github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker` is a RDSS client conforming to the RDSS messaging API. Both `consumer` and `publisher` packages in this repository are use cases. If you want to know more, there is a comprehensive example in [broker_test.go](broker/broker_test.go).
 - `github.com/JiscRDSS/rdss-archivematica-channel-adapter/s3` is a small S3 wrapper used to download files.
 
-## Diagram
+## Profiling
 
-This diagram is not up to date but it's close to the current design:
+Both `consumer` and `publisher` serve Go runtime profiling data in the format expected by the `pprof` visualization tool - they listen on `0.0.0.0:6060`. Learn how to use the [tool](https://golang.org/pkg/net/http/pprof/).
+
+## Diagram
 
 ![RDSS Archivematica Channel Adapter Diagram](hack/diagram.png)

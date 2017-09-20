@@ -93,10 +93,6 @@ func createBrokerClient() (*broker.Broker, error) {
 		"tls_dynamodb":      viper.GetString("broker.kinesis.tls_dynamodb"),
 		"endpoint_dynamodb": viper.GetString("broker.kinesis.endpoint_dynamodb"),
 	}
-	// Set default app name if given value is blank
-	if backendConfig["app_name"] == "" {
-		backendConfig["app_name"] = "rdss_am"
-	}
 	var opts = []backend.DialOpts{}
 	for key, value := range backendConfig {
 		opts = append(opts, backend.WithKeyValue(key, value))
