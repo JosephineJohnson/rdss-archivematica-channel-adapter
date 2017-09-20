@@ -1,4 +1,4 @@
-FROM golang:1.8.3-alpine as builder
+FROM golang:1.9.0-alpine as builder
 WORKDIR /go/src/github.com/JiscRDSS/rdss-archivematica-channel-adapter
 COPY . .
 RUN set -x \
