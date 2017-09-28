@@ -9,6 +9,10 @@ tools:
 	go get -u github.com/golang/dep/...
 	go get -u golang.org/x/tools/cmd/cover
 	go get -u github.com/golang/protobuf/protoc-gen-go
+	go get -u github.com/gogo/protobuf/proto
+	go get -u github.com/gogo/protobuf/jsonpb
+	go get -u github.com/gogo/protobuf/protoc-gen-gogo
+	go get -u github.com/gogo/protobuf/gogoproto
 
 build:
 	@echo ${VERSION}

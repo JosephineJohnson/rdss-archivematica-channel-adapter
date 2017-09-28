@@ -22,10 +22,9 @@ readonly GOPATH="${GOPATH:-${__gopath}}"
 echo "Compiling..."
 cd ${__root}
 
-# Generate gRPC stub
 protoc \
 	-I/usr/local/include \
 	-I. \
 	-I${GOPATH}/src \
-	--go_out=plugins=grpc:${GOPATH}/src/github.com/JiscRDSS/rdss-archivematica-channel-adapter \
+	--gogo_out=plugins=grpc:${GOPATH}/src/github.com/JiscRDSS/rdss-archivematica-channel-adapter \
 	publisher/pb/rpc.proto
