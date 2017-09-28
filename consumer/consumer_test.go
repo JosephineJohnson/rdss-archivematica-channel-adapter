@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/amclient"

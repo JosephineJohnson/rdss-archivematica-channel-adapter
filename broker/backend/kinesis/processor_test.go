@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
