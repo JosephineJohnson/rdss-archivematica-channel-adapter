@@ -88,11 +88,9 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 		}
 		for _, c := range file.FileChecksum {
 			switch c.ChecksumType {
-			case 1:
+			case message.ChecksumTypeEnum_md5:
 				t.ChecksumMD5(name, c.ChecksumValue)
-			case 2:
-				t.ChecksumSHA1(name, c.ChecksumValue)
-			case 3:
+			case message.ChecksumTypeEnum_sha256:
 				t.ChecksumSHA256(name, c.ChecksumValue)
 			}
 		}
