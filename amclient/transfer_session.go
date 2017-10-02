@@ -251,6 +251,19 @@ func NewMetadataSet(fs afero.Fs) *MetadataSet {
 	}
 }
 
+// Entries returns all entries that were created.
+func (m *MetadataSet) Entries() map[string][][2]string {
+	// MetadataSet doesn't have a mutex yet but once it's used, it should be
+	// locked right here.
+
+	// Make a copy so the returned value won't race with future log requests.
+	entries := make(map[string][][2]string)
+	for k, v := range m.entries {
+		entries[k] = v
+	}
+	return entries
+}
+
 func (m *MetadataSet) Add(name, field, value string) {
 	m.entries[name] = append(m.entries[name], [2]string{field, value})
 }

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -234,5 +235,25 @@ func TestTransferSession_ChecksumSet(t *testing.T) {
 	have := string(c)
 	if want1 != have && want2 != have {
 		t.Fatalf("Unexpected content:\nhave:\n%s\nwant1:\n%s\nwant2:\n%s", have, want1, want2)
+	}
+}
+
+func TestMetadataSet_Entries(t *testing.T) {
+	entries := map[string][][2]string{
+		"key": [][2]string{
+			[2]string{"dc.title", "Título"},
+			[2]string{"dc.identifier", "12345"},
+		},
+	}
+	ms := MetadataSet{entries: entries}
+	got := ms.Entries()
+	if !reflect.DeepEqual(entries, got) {
+		t.Error("Entries() method did not return the expected copy of the entries")
+	}
+
+	// Mutate internal data structure
+	delete(ms.entries, "key")
+	if reflect.DeepEqual(ms.Entries(), got) {
+		t.Error("Entries() should return a copy of the internal map but it didn't")
 	}
 }

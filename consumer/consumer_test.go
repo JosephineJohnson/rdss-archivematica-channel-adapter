@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	logt "github.com/sirupsen/logrus/hooks/test"
 	"github.com/spf13/afero"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/amclient"
@@ -47,7 +47,7 @@ func testMainWrapper(m *testing.M) int {
 }
 
 func tearUp() {
-	logger := log.New()
+	logger, _ := logt.NewNullLogger()
 
 	var err error
 	ba, err = backend.Dial("backendmock")

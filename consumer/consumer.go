@@ -153,6 +153,7 @@ func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateReque
 	for _, item := range f.ObjectOrganisationRole {
 		t.Describe("dc.publisher", item.Organisation.OrganisationName)
 	}
+
 	for _, item := range f.ObjectPersonRole {
 		if item.Role != message.PersonRoleEnum_dataCreator {
 			continue
