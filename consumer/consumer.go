@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -59,18 +58,19 @@ func (c *ConsumerImpl) Start() {
 	c.logger.Info("Consumer says good-bye!")
 }
 
-var (
-	ErrUnpexpectedPayloadType = errors.New("unexpected payload type")
-	ErrInvalidFile            = errors.New("invalid file")
-)
-
 // handleMetadataCreateRequest handles the reception of a Metadata Create
 // messages.
 func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
-	body, ok := msg.MessageBody.(*message.MetadataCreateRequest)
-	if !ok {
-		return ErrUnpexpectedPayloadType
+	body, err := msg.MetadataCreateRequest()
+	if err != nil {
+		return err
 	}
+
+	// Ignore messages with no files listed
+	if len(body.ObjectFile) == 0 {
+		return nil
+	}
+
 	t, err := c.amc.TransferSession(body.ObjectTitle, c.depositFs)
 	if err != nil {
 		return err
@@ -80,10 +80,10 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 		c.logger.Warningf("Failed to download `automated` processing configuration: %s", err)
 	}
 	describeDataset(t, body)
-	for _, file := range body.ObjectFile {
+	for i, file := range body.ObjectFile {
 		name := getFilename(file.FileStorageLocation)
 		if name == "" {
-			err = ErrInvalidFile
+			err = fmt.Errorf("malformed file storage location: %s (position %d)", file.FileStorageLocation, i)
 			break
 		}
 		for _, c := range file.FileChecksum {
