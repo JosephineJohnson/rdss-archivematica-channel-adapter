@@ -1,14 +1,30 @@
 package consumer
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/spf13/afero"
+
+	log "github.com/sirupsen/logrus"
 	logt "github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/amclient"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/message"
+	s3lib "github.com/JiscRDSS/rdss-archivematica-channel-adapter/s3"
 )
 
 func Test_handleMetadataCreateRequest_errMessageType(t *testing.T) {
@@ -100,6 +116,86 @@ func Test_describeFile(t *testing.T) {
 	if !reflect.DeepEqual(want, entries) {
 		t.Fatalf("describeFile(); unexpected result, want %v, got %v", want, entries)
 	}
+}
+
+func Test_downloadFile_HTTP(t *testing.T) {
+	ctx := context.Background()
+	logger, hook := logt.NewNullLogger()
+	logger.SetLevel(log.DebugLevel)
+	_, f := getFile(t, "/foobar.jpg")
+
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	url, _ := url.Parse(server.URL)
+
+	body := []byte(`data`)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	})
+
+	if err := downloadFile(logger, ctx, nil, http.DefaultClient, f, message.StorageTypeEnum_HTTP, url.String()); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := f.Stat(); err != nil {
+		t.Fatal(err)
+	} else {
+		if got, want := info.Size(), len(body); int(got) != want {
+			t.Fatalf("Returned file has unexpected size; want %d, got %d", want, got)
+		}
+	}
+
+	entries := hook.AllEntries()
+	if len(entries) != 2 {
+		t.Fatal("Unexpected number of log entries")
+	}
+	if entries[1].Message != fmt.Sprintf("Downloaded %s - %d bytes written", url.String(), len(body)) {
+		t.Fatal("Unexpected log entry")
+	}
+}
+
+func Test_downloadFile_S3(t *testing.T) {
+	ctx := context.Background()
+	logger, _ := logt.NewNullLogger()
+	logger.SetLevel(log.DebugLevel)
+	_, f := getFile(t, "foobar.jpg")
+
+	body := []byte(`data`)
+	s3c := &mockS3Client{t: t, data: ioutil.NopCloser(bytes.NewReader(body))}
+	s3d := s3manager.NewDownloaderWithClient(s3c)
+	client := &s3lib.ObjectStorageImpl{S3: s3c, S3Downloader: s3d}
+
+	if err := downloadFile(logger, ctx, client, nil, f, message.StorageTypeEnum_S3, "s3://bucket/foobar.jpg"); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := f.Stat(); err != nil {
+		t.Fatal(err)
+	} else {
+		if got, want := info.Size(), len(body); int(got) != want {
+			t.Fatalf("Returned file has unexpected size; want %d, got %d", want, got)
+		}
+	}
+}
+
+type mockS3Client struct {
+	s3iface.S3API
+	t    *testing.T
+	data io.ReadCloser
+}
+
+func (c *mockS3Client) GetObjectWithContext(ctx aws.Context, input *s3.GetObjectInput, opts ...request.Option) (*s3.GetObjectOutput, error) {
+	return &s3.GetObjectOutput{
+		Body:         c.data,
+		ContentRange: aws.String("1"),
+	}, nil
+}
+
+func getFile(t *testing.T, name string) (afero.Afero, afero.File) {
+	fs := afero.Afero{Fs: afero.NewBasePathFs(afero.NewMemMapFs(), "/")}
+	f, err := fs.Create(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fs, f
 }
 
 func getConsumer(t *testing.T) (*ConsumerImpl, *logt.Hook) {

@@ -3,8 +3,11 @@ package consumer
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -66,7 +69,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 		return err
 	}
 
-	// Ignore messages with no files listed
+	// Ignore messages with no files listed.
 	if len(body.ObjectFile) == 0 {
 		return nil
 	}
@@ -75,17 +78,26 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	if err != nil {
 		return err
 	}
-	err = t.ProcessingConfig("automated") // Automated workflow
+
+	// Download automated workflow.
+	err = t.ProcessingConfig("automated")
 	if err != nil {
 		c.logger.Warningf("Failed to download `automated` processing configuration: %s", err)
 	}
+
+	// Process dataset metadata.
 	describeDataset(t, body)
+
 	for i, file := range body.ObjectFile {
+
+		// Extract filename from location.
 		name := getFilename(file.FileStorageLocation)
 		if name == "" {
-			err = fmt.Errorf("malformed file storage location: %s (position %d)", file.FileStorageLocation, i)
-			break
+			c.logger.Errorf("Malformed file storage location: %s (position %d)", file.FileStorageLocation, i)
+			continue
 		}
+
+		// Add checksum metadata.
 		for _, c := range file.FileChecksum {
 			switch c.ChecksumType {
 			case message.ChecksumTypeEnum_md5:
@@ -94,35 +106,70 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				t.ChecksumSHA256(name, c.ChecksumValue)
 			}
 		}
+
+		// Download and describe each file.
 		// Using an anonymous function so I can use defer inside this loop.
-		var iErr error
+		var err error
 		func() {
-			var (
-				f afero.File
-				n int64
-			)
+			var f afero.File
 			f, err = t.Create(name)
 			if err != nil {
-				iErr = err
 				c.logger.Errorf("Error creating %s: %v", name, err)
 				return
 			}
 			defer f.Close()
-			c.logger.Debugf("Saving %s into %s", file.FileStorageLocation, f.Name())
-			n, err = c.s3.Download(c.ctx, f, file.FileStorageLocation)
-			if err != nil {
-				iErr = err
-				c.logger.Errorf("Error downloading %s: %v", file.FileStorageLocation, err)
+			if err = downloadFile(c.logger, c.ctx, c.s3, http.DefaultClient, f, file.FileStorageType, file.FileStorageLocation); err != nil {
 				return
 			}
-			c.logger.Debugf("Downloaded %s - %d bytes written", file.FileStorageLocation, n)
 			describeFile(t, name, &file)
 		}()
-		if iErr != nil {
-			return iErr
+		if err != nil {
+			return err
 		}
 	}
+
 	return t.Start()
+}
+
+func downloadFile(logger log.FieldLogger, ctx context.Context, s3Client s3.ObjectStorage, httpClient *http.Client, target afero.File, storageType message.StorageTypeEnum, storageLocation string) error {
+	logger.Debugf("Saving %s into %s", storageLocation, target.Name())
+	var (
+		n      int64
+		err    = fmt.Errorf("unsupported storage location type: %s", storageType)
+		cancel context.CancelFunc
+	)
+	ctx, cancel = context.WithTimeout(ctx, time.Minute*30)
+	defer cancel()
+	switch storageType {
+	case message.StorageTypeEnum_HTTP:
+		n, err = downloadFileHTTP(ctx, httpClient, target, storageLocation)
+
+	case message.StorageTypeEnum_S3:
+		n, err = s3Client.Download(ctx, target, storageLocation)
+	}
+	if err != nil {
+		logger.Errorf("Error downloading %s: %s", storageLocation, err)
+		return err
+	}
+	logger.Debugf("Downloaded %s - %d bytes written", storageLocation, n)
+	return nil
+}
+
+func downloadFileHTTP(ctx context.Context, httpClient *http.Client, target afero.File, storageLocation string) (int64, error) {
+	req, err := http.NewRequest("GET", storageLocation, nil)
+	if err != nil {
+		return 0, err
+	}
+	req = req.WithContext(ctx)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("unexpected status code: %d (%s)", resp.StatusCode, resp.Status)
+	}
+	return io.Copy(target, resp.Body)
 }
 
 func getFilename(path string) string {
