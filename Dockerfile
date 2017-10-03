@@ -4,7 +4,7 @@ COPY . .
 RUN set -x \
 	&& apk add --no-cache ca-certificates \
 	&& apk add --no-cache --virtual .build-deps make gcc musl-dev git \
-	&& make test vet \
+	&& make \
 	&& make install
 RUN set -x \
 	&& addgroup -g 333 -S archivematica \

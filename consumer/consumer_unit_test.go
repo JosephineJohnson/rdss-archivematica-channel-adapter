@@ -57,7 +57,7 @@ func Test_describeDataset(t *testing.T) {
 		}
 	)
 	describeDataset(ts, &message.MetadataCreateRequest{
-		message.ResearchObject{
+		ResearchObject: message.ResearchObject{
 			ObjectTitle:        "Title",
 			ObjectResourceType: message.ResourceTypeEnum_audio,
 			ObjectIdentifier: []message.Identifier{
