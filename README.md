@@ -45,183 +45,183 @@ The adapter is not configurable via command-line flags. You can choose between e
 
 The following is a list of supported environment variables. They need to be prefixed with the string `RDSS_ARCHIVEMATICA_ADAPTER_`, e.g. `RDSS_ARCHIVEMATICA_ADAPTER_LOGGING.LEVEL=DEBUG`. Notice that the dot is used to separate nested attributes.
 
-`LOGGING.LEVEL`
+:heavy_minus_sign: `LOGGING.LEVEL`
 
 > Default: `"INFO"`
 
 All severity levels defined by [RFC 5424](https://tools.ietf.org/html/rfc5424) are supported.
 
-`AMCLIENT.URL`
+:heavy_minus_sign: `AMCLIENT.URL`
 
 > Default: `""`
 
 Archivematica API - URL, e.g.: `"https://my.archivematica.internal:9000`.
 
-`AMCLIENT.USER`
+:heavy_minus_sign: `AMCLIENT.USER`
 
 > Default: `""`
 
 Archivematica API - Username, e.g.:  `"demo"`.
 
-`AMCLIENT.KEY`
+:heavy_minus_sign: `AMCLIENT.KEY`
 
 > Default: `""`
 
 Archivematica API - Key, e.g.: `"eid3Aitheijoo1ohce2pho4eiDei0lah"`.
 
-`S3.FORCE_PATH_STYLE`
+:heavy_minus_sign: `S3.FORCE_PATH_STYLE`
 
 > Default: `false`
 
 When set to `true`, the bucket name is always left in the request URL and never moved to the host as a sub-domain.
 
-`S3.INSECURE_SKIP_VERIFY`
+:heavy_minus_sign: `S3.INSECURE_SKIP_VERIFY`
 
 > Default: `false`
 
 When set to `true`, the client will skip the TLS verification process.
 
-`S3.ENDPOINT`
+:heavy_minus_sign: `S3.ENDPOINT`
 
 > Default: `""`
 
 When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"https://127.0.0.1:4567"`.
 
-`S3.ACCESS_KEY`
+:heavy_minus_sign: `S3.ACCESS_KEY`
 
 > Default: `""`
 
 When set to a non-empty string, it's combined with `S3.SECRET_KEY` to set up the static credential object.
 
-`S3.SECRET_KEY`
+:heavy_minus_sign: `S3.SECRET_KEY`
 
 > Default: `""`
 
 When set to a non-empty string, it's combined with `S3.ACCESS_KEY` to set up the static credential object.
 
-`S3.REGION`
+:heavy_minus_sign: `S3.REGION`
 
 > Default: `""`
 
 AWS Region. If empty, the AWS SDK will throw an error. E.g.: `eu-west-2`.
 
-`CONSUMER.ARCHIVEMATICA_TRANSFER_DEPOSIT_DIR`
+:heavy_minus_sign: `CONSUMER.ARCHIVEMATICA_TRANSFER_DEPOSIT_DIR`
 
 > Default: `"/var/archivematica/sharedDirectory/watchedDirectories/activeTransfers/standardTransfer"`
 
 Location of the `standardTransfer` directory of the Archivematica pipeline.
 
-`PUBLISHER.LISTEN`
+:heavy_minus_sign: `PUBLISHER.LISTEN`
 
 > Default: `"0.0.0.0:8000"`
 
 Address of the gRPC server found in the publisher.
 
-`PUBLISHER.TLS`
+:heavy_minus_sign: `PUBLISHER.TLS`
 
 > Default: `false`
 
 When set to `true`, the gRPC server is built with the TLS integration enabled which is helpful if you want your clients to authenticate the server and encrypt all the data exchanged between the clients and the server.
 
-`PUBLISHER.TLS_CERT_FILE`
+:heavy_minus_sign: `PUBLISHER.TLS_CERT_FILE`
 
 > Default: `""`
 
 When `PUBLISHER.TLS` is set to `true`, this is used to describe the location of the public key of the X509 key pair. The file must contain PEM encoded data and it may contain intermediate certificates following the leaf certificate to form a certificate chain.
 
-`PUBLISHER.TLS_KEY_FILE`
+:heavy_minus_sign: `PUBLISHER.TLS_KEY_FILE`
 
 > Default: `""`
 
 When `PUBLISHER.TLS` is set to `true`, this is used to describe the location of the private key of the X509 key pair. The file must contain PEM encoded data.
 
-`BROKER.BACKEND`
+:heavy_minus_sign: `BROKER.BACKEND`
 
 > Default: `"kinesis"`
 
 The name of the backend used as the RDSS broker. `"kinesis"` is the backend currently supported in addition to "backendmock"`, developed for testing purposes only.
 
-`BROKER.QUEUES.MAIN`
+:heavy_minus_sign: `BROKER.QUEUES.MAIN`
 
 > Default: `"main"`
 
 Name of the main message queue.
 
-`BROKER.QUEUES.INVALID`
+:heavy_minus_sign: `BROKER.QUEUES.INVALID`
 
 > Default: `"invalid"`
 
 Name of the invalid message queue.
 
-`BROKER.QUEUES.ERROR`
+:heavy_minus_sign: `BROKER.QUEUES.ERROR`
 
 > Default: `"error"`
 
 Name of the error message queue.
 
-`BROKER.REPOSITORY.BACKEND`
+:heavy_minus_sign: `BROKER.REPOSITORY.BACKEND`
 
 > Default: `"builtin"`
 
 The [Local Data Repository](https://github.com/JiscRDSS/rdss-message-api-docs#local-data-repository) backend. The default (`"builtin"`) is a simple non-persisted hash in memory. A better alternative that can be shared by multiple consumers is the `dynamodb` backend which uses a single DynamoDB table.
 
-`BROKER.REPOSITORY.DYNAMODB_TLS`
+:heavy_minus_sign: `BROKER.REPOSITORY.DYNAMODB_TLS`
 
 > Default: `true`
 
 When set to `true`, the client uses the TLS protocol to communicate securely with the server. If you are using a clone of DynamoDB like dynalite you may prefer to have it disabled.
 
-`BROKER.REPOSITORY.DYNAMODB_TABLE`
+:heavy_minus_sign: `BROKER.REPOSITORY.DYNAMODB_TABLE`
 
-> Default: ``""`
+> Default: `""`
 
 The DynamoDB table name which must conform the [naming rules](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html#HowItWorks.NamingRules).
 
-`BROKER.REPOSITORY.DYNAMODB_ENDPOINT`
+:heavy_minus_sign: `BROKER.REPOSITORY.DYNAMODB_ENDPOINT`
 
 > Default: `""`
 
 When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"http://127.0.0.1:9999"`.
 
-`BROKER.REPOSITORY.DYNAMODB_REGION`
+:heavy_minus_sign: `BROKER.REPOSITORY.DYNAMODB_REGION`
 
 > Default: `""`
 
 AWS Region. If empty, the AWS SDK will throw an error. E.g.: `eu-west-2`.
 
-`BROKER.KINESIS.APP_NAME`
+:heavy_minus_sign: `BROKER.KINESIS.APP_NAME`
 
 > Default: `"rdss_am"`
 
 This is used to prefix the names of the DynamoDB tables used to share state across multiple consumers. If you are setting up more than one consumer remember to define the same value in all of them.
 
-`BROKER.KINESIS.REGION` 
+:heavy_minus_sign: `BROKER.KINESIS.REGION`
 
 > Default: `""`
 
 AWS Region. If empty, the AWS SDK will throw an error. E.g.: `eu-west-2`.
 
-`BROKER.KINESIS.TLS`
+:heavy_minus_sign: `BROKER.KINESIS.TLS`
 
 > Default: `true`
 
 When set to `true`, the client uses the TLS protocol to communicate securely with the server. If you are using a clone of DynamoDB like dynalite you may prefer to have it disabled.
 
-`BROKER.KINESIS.ENDPOINT`
+:heavy_minus_sign: `BROKER.KINESIS.ENDPOINT`
 
-> Default: ``
+> Default: `""`
 
 When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"http://127.0.0.1:4567"`.
 
-`BROKER.KINESIS.TLS_DYNAMODB`
+:heavy_minus_sign: `BROKER.KINESIS.TLS_DYNAMODB`
 
 > Default: `true`
 
 When set to `true`, the client uses the TLS protocol to communicate securely with the server. If you are using a clone of DynamoDB like dynalite you may prefer to have it disabled.
 
-`BROKER.KINESIS.ENDPOINT_DYNAMODB`
+:heavy_minus_sign: `BROKER.KINESIS.ENDPOINT_DYNAMODB`
 
-> Default: ``
+> Default: `""`
 
 When set to a non-empty string, it's used as the AWS service endpoint, e.g.: `"http://127.0.0.1:9999"`.
 
