@@ -9,22 +9,12 @@ import (
 	"sort"
 	"time"
 
+	"github.com/cenkalti/backoff"
+
 	"path"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-)
-
-const (
-	// Timeout is the longest that TransferSession is going to wait before
-	// it ceases to wait for the transfer to be picked by MCP and be listed.
-	Timeout = 10 * time.Second
-
-	// MaxAttempts is the number of attempts to list unapproved transfers.
-	MaxAttempts = 10
-
-	// Objects prefix
-	objectsDirPrefix = "objects/"
 )
 
 // TransferSession lets you prepare a new transfer and submit it to
@@ -94,11 +84,11 @@ func (s *TransferSession) Create(name string) (afero.File, error) {
 	return f, nil
 }
 
-// ProcessingConfig inclues a processing configuration (processingMCP.xml)
+// ProcessingConfig includes a processing configuration (processingMCP.xml)
 // given its name.
 func (s *TransferSession) ProcessingConfig(name string) error {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	config, _, err := s.c.ProcessingConfig.Get(ctx, name)
@@ -106,12 +96,7 @@ func (s *TransferSession) ProcessingConfig(name string) error {
 		return err
 	}
 
-	err = s.fs.SafeWriteReader("/processingMCP.xml", config)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.fs.SafeWriteReader("/processingMCP.xml", config)
 }
 
 // Start submits the transfer to Archivematica.
@@ -120,7 +105,6 @@ func (s *TransferSession) Start() error {
 		ctx      = context.Background()
 		req      = &TransferUnapprovedRequest{}
 		basePath = path.Base(s.Path)
-		attempts = 0
 	)
 
 	if err := s.createMetadataDir(); err != nil {
@@ -135,21 +119,19 @@ func (s *TransferSession) Start() error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, Timeout)
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "context done")
-		default:
-		}
-
-		attempts++
+	// This is our approval function. We start making sure that the function is
+	// listed as unapproved or retry until it does. If it's positive, then try
+	// to approve it.
+	//
+	// It doesn't give up if the server returns errors.
+	op := func() error {
 		payload, _, err := s.c.Transfer.Unapproved(ctx, req)
 		if err != nil {
+			// This is bad because AM isn't able to list unapproved requests.
+			// We're going to keep trying.
 			return errors.Wrap(err, "unapproved request failed")
 		}
+		// Check if the transfer is listed as unapproved.
 		for _, item := range payload.Results {
 			if item.Directory == basePath {
 				_, _, err := s.c.Transfer.Approve(ctx, &TransferApproveRequest{
@@ -157,19 +139,21 @@ func (s *TransferSession) Start() error {
 					Type:      "standard",
 				})
 				if err != nil {
+					// We've tried but it failed. Retry.
 					return errors.Wrap(err, "approve request failed")
 				}
 				return nil
 			}
 		}
-
-		if attempts == MaxAttempts {
-			return errors.Errorf("maximum number of attempts reached: %d", MaxAttempts)
-		}
-
-		// Wait for an extra second before the next attempt
-		time.Sleep(time.Second * 1)
+		// We're going to keep trying
+		return errors.New("transfer is not listed yet - keep trying")
 	}
+
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = 10 * time.Minute
+	bo.MaxInterval = 30 * time.Second
+
+	return backoff.Retry(op, bo)
 }
 
 // Contents returns a list with all the files currently available in the

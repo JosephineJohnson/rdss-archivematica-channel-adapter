@@ -8,6 +8,12 @@
   version = "v1.10.27"
 
 [[projects]]
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  revision = "61153c768f31ee5f130071d08fc82b85208528de"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "629574ca2a5df945712d3079857300b5e4da0236"
@@ -184,6 +190,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5a1ec3afa15e898b35e51fb672749f7278181f7768f5cb401069b17b26bf9c79"
+  inputs-digest = "634e3bac827f7509189966f13ae50bca848315d3453b997edd80e4d580eb1046"
   solver-name = "gps-cdcl"
   solver-version = 1
