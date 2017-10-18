@@ -6,7 +6,7 @@ VERSION := $(shell git describe --tags --always --dirty)
 default: testrace vet
 
 tools:
-	go get -u github.com/golang/dep/...
+	go get -u github.com/golang/dep/cmd/...
 	go get -u golang.org/x/tools/cmd/cover
 	go get -u github.com/golang/protobuf/protoc-gen-go
 	go get -u github.com/gogo/protobuf/proto
