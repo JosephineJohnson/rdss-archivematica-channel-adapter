@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -67,6 +68,10 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 		return err
 	}
 
+	if strings.Contains(body.ObjectTitle, "PAR") {
+		return c.handle_PAR_MetadataCreateRequest(msg)
+	}
+
 	// Ignore messages with no files listed.
 	if len(body.ObjectFile) == 0 {
 		return nil
@@ -120,6 +125,49 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	}
 
 	return t.Start()
+}
+
+/*
+ * handle_PAR_MetadataCreateRequest is part of a proof of concept. It recieves
+ * MetadataCreate messages pointing to files that are going to be identified
+ * using the rdss-siegfried-service instead of using Archivematica.
+ * The results are logged but they're not persisted anywhere else.
+ */
+func (c *ConsumerImpl) handle_PAR_MetadataCreateRequest(msg *message.Message) error {
+	body, err := msg.MetadataCreateRequest()
+	if err != nil {
+		return err
+	}
+	const baseURL = "http://rdss-siegfried-service:8080"
+	idsvc := amclient.NewFileIdentificationService(baseURL)
+
+	const tmpSharedDirectory = "/var/archivematica/sharedDirectory/tmp"
+	fs := afero.Afero{Fs: afero.NewBasePathFs(afero.NewOsFs(), tmpSharedDirectory)}
+
+	// Download the files into the temporary folder of the shared directory and
+	// identify them.
+	for _, file := range body.ObjectFile {
+		func() {
+			f, err := fs.TempFile("/", "")
+			if err != nil {
+				c.logger.Errorf("Error creating temporary file: %v", err)
+				return
+			}
+			defer f.Close()
+			c.logger.Infof("Downloading file %s", file.FileStorageLocation)
+			if err = downloadFile(c.logger, c.ctx, c.s3, http.DefaultClient, f, file.FileStorageType, file.FileStorageLocation); err != nil {
+				c.logger.Errorf("Error downloading file %s: %v", file.FileStorageLocation, err)
+				return
+			}
+			res, err := idsvc.Identify(c.ctx, &amclient.Bitstream{Path: f.Name()})
+			if err != nil {
+				c.logger.Errorf("Error identifying file %s: %v", f.Name(), err)
+			}
+			c.logger.Infof("File %s was downloaded and identified successfully! PUID %s", file.FileStorageLocation, res.PUID)
+		}()
+	}
+
+	return nil
 }
 
 func downloadFile(logger log.FieldLogger, ctx context.Context, s3Client s3.ObjectStorage, httpClient *http.Client, target afero.File, storageType message.StorageTypeEnum, storageLocation string) error {
