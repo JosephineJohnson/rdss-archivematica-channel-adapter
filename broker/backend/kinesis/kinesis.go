@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
@@ -64,8 +65,15 @@ func (b *BackendImpl) Publish(topic string, data []byte) error {
 		Data:         data,
 		PartitionKey: aws.String(strconv.FormatInt(now.UnixNano(), 10)),
 	}
-	_, err := b.Kinesis.PutRecord(input)
-	return err
+	return backend.Publish(func() error { // Send message function
+		_, err := b.Kinesis.PutRecord(input)
+		return err
+	}, func(err error) bool { // Can retry function
+		if awsErr, ok := err.(awserr.Error); ok {
+			return awsErr.Code() == kinesis.ErrCodeProvisionedThroughputExceededException
+		}
+		return false
+	}, nil)
 }
 
 func (b *BackendImpl) Subscribe(topic string, cb backend.Handler) {

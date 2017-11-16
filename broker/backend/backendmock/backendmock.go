@@ -1,7 +1,10 @@
 package backendmock
 
 import (
+	"errors"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
 )
@@ -13,8 +16,21 @@ func New(opts *backend.Opts) (backend.Backend, error) {
 	return b, nil
 }
 
+func NewWithRetry(opts *backend.Opts) (backend.Backend, error) {
+	b := &BackendWithRetry{maxRetries: 3}
+	if valueString, ok := opts.Opts["maxRetries"]; ok {
+		value, err := strconv.ParseUint(valueString, 0, 0)
+		if err != nil {
+			return b, err
+		}
+		b.maxRetries = int(value)
+	}
+	return b, nil
+}
+
 func init() {
 	backend.Register("backendmock", New)
+	backend.Register("backendmockretry", NewWithRetry)
 }
 
 // BackendImpl is a mock implementation of broker.Backend. It's not safe to use
@@ -57,4 +73,31 @@ func (b *BackendImpl) Check(topic string) error {
 // Close implements broker.Backend
 func (b *BackendImpl) Close() error {
 	return nil
+}
+
+// BackendWithRetry is a mock implementation to exercise backoff and retry.
+type BackendWithRetry struct {
+	BackendImpl
+
+	maxRetries int
+	Retries    int
+}
+
+func (b *BackendWithRetry) Publish(topic string, data []byte) error {
+	return backend.Publish(func() error { // Send message function
+		if b.Retries < b.maxRetries {
+			b.Retries = b.Retries + 1
+			return errors.New("Waiting backoff")
+		}
+		return b.BackendImpl.Publish(topic, data)
+	}, func(err error) bool { // Can retry function
+		return true
+	}, &mockBackoff{})
+}
+
+type mockBackoff struct {
+}
+
+func (mb *mockBackoff) NextBackOff() time.Duration {
+	return time.Duration(0)
 }

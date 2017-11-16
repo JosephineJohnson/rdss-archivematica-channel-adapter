@@ -3,6 +3,9 @@ package backend
 import (
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/cenkalti/backoff"
 )
 
 // Backend is a low-level interface used to interact with RDSS brokers.
@@ -39,6 +42,13 @@ type Opts struct {
 // DialOpts is a daisy-chaining mechanism for setting options to a backend
 // during Dial.
 type DialOpts func(*Opts) error
+
+// Backoff wraps a network retry backoff type to control backoff periods.
+// Typically we want the 3rd-party backoff structure, but others, e.g. a test
+// version can be used instead.
+type Backoff interface {
+	NextBackOff() time.Duration
+}
 
 // Register register a new broker backend under a name. It is tipically used in
 // init functions.
@@ -94,4 +104,31 @@ func Dial(name string, opts ...DialOpts) (Backend, error) {
 		}
 	}
 	return fn(dOpts)
+}
+
+// Publish may be used by Backend implementations to provide backoff
+// and retry for network problems.
+func Publish(publish func() error, canRetry func(err error) bool, retry Backoff) error {
+
+	if retry == nil {
+		retry = backoff.NewExponentialBackOff()
+	}
+
+	var err error
+	for {
+		err = publish()
+		if err == nil {
+			break
+		}
+		if canRetry(err) {
+			duration := retry.NextBackOff()
+			if duration == backoff.Stop {
+				break
+			}
+			time.Sleep(duration)
+		} else {
+			break
+		}
+	}
+	return err
 }
