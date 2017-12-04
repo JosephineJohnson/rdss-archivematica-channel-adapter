@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 
@@ -109,7 +110,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				return
 			}
 			defer f.Close()
-			if err = downloadFile(c.logger, c.ctx, c.s3, http.DefaultClient, f, file.FileStorageType, file.FileStorageLocation); err != nil {
+			if err = downloadFile(c.logger, c.ctx, c.s3, http.DefaultClient, f, file.FileStorageType, file.FileStorageLocation, nil); err != nil {
 				return
 			}
 			describeFile(t, file.FileName, &file)
@@ -122,7 +123,11 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 	return t.Start()
 }
 
-func downloadFile(logger log.FieldLogger, ctx context.Context, s3Client s3.ObjectStorage, httpClient *http.Client, target afero.File, storageType message.StorageTypeEnum, storageLocation string) error {
+// retry is a retry-backoff time provider that manages times between retries for the http storage type.
+// It can be nil in which case the default scheme will be used. The S3 download includes its own
+// retry scheme (http://docs.aws.amazon.com/general/latest/gr/api-retries.html)
+func downloadFile(logger log.FieldLogger, ctx context.Context, s3Client s3.ObjectStorage, httpClient *http.Client, target afero.File,
+	storageType message.StorageTypeEnum, storageLocation string, retry backoff.BackOff) error {
 	logger.Debugf("Saving %s into %s", storageLocation, target.Name())
 	var (
 		n      int64
@@ -133,7 +138,7 @@ func downloadFile(logger log.FieldLogger, ctx context.Context, s3Client s3.Objec
 	defer cancel()
 	switch storageType {
 	case message.StorageTypeEnum_HTTP:
-		n, err = downloadFileHTTP(ctx, httpClient, target, storageLocation)
+		n, err = downloadFileHTTP(ctx, httpClient, target, storageLocation, retry)
 
 	case message.StorageTypeEnum_S3:
 		n, err = s3Client.Download(ctx, target, storageLocation)
@@ -146,25 +151,49 @@ func downloadFile(logger log.FieldLogger, ctx context.Context, s3Client s3.Objec
 	return nil
 }
 
-func downloadFileHTTP(ctx context.Context, httpClient *http.Client, target io.Writer, storageLocation string) (int64, error) {
+func downloadFileHTTP(ctx context.Context, httpClient *http.Client, target io.Writer, storageLocation string, retry backoff.BackOff) (int64, error) {
+	// Use exponential backoff algorithm if the user doesn't provide one.
+	if retry == nil {
+		retry = backoff.NewExponentialBackOff()
+	}
+	// Create a BackOffContext to stop retrying after the context is canceled.
+	cb := backoff.WithContext(retry, ctx)
+
+	// Create the Request.
 	req, err := http.NewRequest("GET", storageLocation, nil)
 	if err != nil {
 		return 0, err
 	}
 	req = req.WithContext(ctx)
-	resp, err := httpClient.Do(req)
-	if err != nil {
+
+	// This is the operation that we want to retry.
+	var resp *http.Response
+	op := func() error {
+		var err error
+		resp, err = httpClient.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return fmt.Errorf("unexpected status code: %d (%s)", resp.StatusCode, resp.Status)
+		}
+		return nil
+	}
+
+	if err := backoff.Retry(op, cb); err != nil {
 		return 0, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("unexpected status code: %d (%s)", resp.StatusCode, resp.Status)
-	}
+
 	return io.Copy(target, resp.Body)
 }
 
 // describeDataset maps properties from a research object into a CSV entry
 // in the `metadata.csv` file used in `amclient`.
+// No need to assign the identifierType now as the XSD has a fixed value of "DOI"
+// If this gets more types in future it can be added in the ObjectIdentifier loop with
+//  t.Describe("identifierType", item.IdentifierType)
 func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateRequest) {
 	t.Describe("dc.title", f.ObjectTitle)
 	t.Describe("dc.type", f.ObjectResourceType.String())

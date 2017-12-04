@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -103,6 +104,40 @@ func Test_describeFile(t *testing.T) {
 }
 
 func Test_downloadFile_HTTP(t *testing.T) {
+	body := []byte(`data`)
+	downloadFile_HTTP(t, body, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	})
+}
+
+type mockBackoff struct {
+}
+
+func (mb *mockBackoff) NextBackOff() time.Duration {
+	return time.Duration(0)
+}
+
+func (mb *mockBackoff) Reset() {
+
+}
+
+func Test_downloadFile_HTTP_retry(t *testing.T) {
+	body := []byte(`data`)
+	count := 0
+	downloadFile_HTTP(t, body, func(w http.ResponseWriter, r *http.Request) {
+		if count < 3 {
+			w.WriteHeader(http.StatusInternalServerError)
+			count = count + 1
+		} else {
+			w.Write(body)
+		}
+	})
+	if count != 3 {
+		t.Fatalf("Did not retry correct number of times")
+	}
+}
+
+func downloadFile_HTTP(t *testing.T, body []byte, requestHandler func(http.ResponseWriter, *http.Request)) {
 	ctx := context.Background()
 	logger, hook := logt.NewNullLogger()
 	logger.SetLevel(log.DebugLevel)
@@ -112,12 +147,9 @@ func Test_downloadFile_HTTP(t *testing.T) {
 	server := httptest.NewServer(mux)
 	url, _ := url.Parse(server.URL)
 
-	body := []byte(`data`)
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(body)
-	})
+	mux.HandleFunc("/", requestHandler)
 
-	if err := downloadFile(logger, ctx, nil, http.DefaultClient, f, message.StorageTypeEnum_HTTP, url.String()); err != nil {
+	if err := downloadFile(logger, ctx, nil, http.DefaultClient, f, message.StorageTypeEnum_HTTP, url.String(), &mockBackoff{}); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := f.Stat(); err != nil {
@@ -148,7 +180,7 @@ func Test_downloadFile_S3(t *testing.T) {
 	s3d := s3manager.NewDownloaderWithClient(s3c)
 	client := &s3lib.ObjectStorageImpl{S3: s3c, S3Downloader: s3d}
 
-	if err := downloadFile(logger, ctx, client, nil, f, message.StorageTypeEnum_S3, "s3://bucket/foobar.jpg"); err != nil {
+	if err := downloadFile(logger, ctx, client, nil, f, message.StorageTypeEnum_S3, "s3://bucket/foobar.jpg", nil); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := f.Stat(); err != nil {
