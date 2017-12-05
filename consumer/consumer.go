@@ -200,6 +200,8 @@ func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateReque
 
 	for _, item := range f.ObjectIdentifier {
 		t.Describe("dc.identifier", item.IdentifierValue)
+		// No need to assign this now as the XSD has a fixed value of "DOI"
+		// t.Describe("identifierType", item.IdentifierType)
 	}
 
 	for _, item := range f.ObjectDate {
@@ -207,6 +209,7 @@ func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateReque
 			continue
 		}
 		t.Describe("dcterms.issued", item.DateValue)
+		t.Describe("dc.publicationYear", item.DateValue)
 	}
 
 	for _, item := range f.ObjectOrganisationRole {
@@ -214,10 +217,12 @@ func describeDataset(t *amclient.TransferSession, f *message.MetadataCreateReque
 	}
 
 	for _, item := range f.ObjectPersonRole {
-		if item.Role != message.PersonRoleEnum_dataCreator {
-			continue
+		if item.Role == message.PersonRoleEnum_dataCreator {
+			t.Describe("dc.creatorName", item.Person.PersonGivenName)
 		}
-		t.Describe("dc.contributor", item.Person.PersonGivenName)
+		if item.Role == message.PersonRoleEnum_publisher {
+			t.Describe("dc.publisher", item.Person.PersonGivenName)
+		}
 	}
 }
 

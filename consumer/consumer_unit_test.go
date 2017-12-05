@@ -52,8 +52,10 @@ func Test_describeDataset(t *testing.T) {
 				[2]string{"dc.identifier", "I1"},
 				[2]string{"dc.identifier", "I2"},
 				[2]string{"dcterms.issued", "date of publication"},
+				[2]string{"dc.publicationYear", "date of publication"},
 				[2]string{"dc.publisher", "orgname"},
-				[2]string{"dc.contributor", "person 2"},
+				[2]string{"dc.creatorName", "person 2"},
+				[2]string{"dc.publisher", "person 3"},
 			},
 		}
 	)
@@ -77,6 +79,7 @@ func Test_describeDataset(t *testing.T) {
 			ObjectPersonRole: []message.PersonRole{
 				message.PersonRole{Role: message.PersonRoleEnum_relatedPerson, Person: &message.Person{PersonGivenName: "person 1"}},
 				message.PersonRole{Role: message.PersonRoleEnum_dataCreator, Person: &message.Person{PersonGivenName: "person 2"}},
+				message.PersonRole{Role: message.PersonRoleEnum_publisher, Person: &message.Person{PersonGivenName: "person 3"}},
 			},
 		},
 	})
