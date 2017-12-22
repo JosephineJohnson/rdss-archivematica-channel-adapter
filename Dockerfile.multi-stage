@@ -17,5 +17,6 @@ COPY --from=builder /go/src/github.com/JiscRDSS/rdss-archivematica-channel-adapt
 RUN apk --no-cache add ca-certificates
 RUN addgroup -g 333 -S archivematica && adduser -u 333 -h /var/lib/archivematica -S -G archivematica archivematica
 USER archivematica
+ENV RDSS_ARCHIVEMATICA_ADAPTER_BROKER.SCHEMAS_DIR /schemas
 ENTRYPOINT ["/var/lib/archivematica/rdss-archivematica-channel-adapter"]
 CMD ["help"]

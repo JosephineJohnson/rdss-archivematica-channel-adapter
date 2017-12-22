@@ -44,6 +44,7 @@ tls_key_file = ""
 
 [broker]
 backend = "kinesis"
+schemas_dir = ""
 
 [broker.queues]
 main = "main"

@@ -109,6 +109,7 @@ func createBrokerClient() (*broker.Broker, error) {
 		QueueInvalid:     viper.GetString("broker.queues.invalid"),
 		QueueError:       viper.GetString("broker.queues.error"),
 		RepositoryConfig: repoConfig,
+		SchemasDir:       viper.GetString("broker.schemas_dir"),
 	}
 	if repoConfig.Backend == "dynamodb" {
 		repoConfig.DynamoDBEndpoint = viper.GetString("broker.repository.dynamodb_endpoint")

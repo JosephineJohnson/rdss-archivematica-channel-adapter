@@ -2,6 +2,8 @@ package message
 
 import (
 	"encoding/json"
+	"reflect"
+	"strings"
 
 	"github.com/twinj/uuid"
 
@@ -10,10 +12,17 @@ import (
 
 // Message represents RDSS messages.
 type Message struct {
+	// MessageHeader carries the message headers.
 	MessageHeader MessageHeader
 
 	// MessageBody carries the message payload.
 	MessageBody interface{}
+
+	// body contains the source bytes of the payload. This is needed by the
+	// validator so it can send the stream of bytes to gojsonschema, e.g.:
+	//	loader := gojsonschema.NewBytesLoader(msg.body)
+	//	validator.Validate(loader)
+	body []byte
 }
 
 // New returns a pointer to a new message with a new ID.
@@ -39,6 +48,18 @@ type messageAlias struct {
 
 func (m *Message) ID() string {
 	return m.MessageHeader.ID
+}
+
+func (m Message) Type() string {
+	t := reflect.TypeOf(m.MessageBody)
+	var name string
+	if t.Kind() == reflect.Ptr {
+		name = t.Elem().String()
+	} else {
+		name = t.String()
+	}
+	parts := strings.Split(name, ".")
+	return parts[1]
 }
 
 func (m *Message) TagError(err error) {
@@ -72,6 +93,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	}
 	m.MessageHeader = msg.MessageHeader
 	m.MessageBody = typedBody(m.MessageHeader.MessageType, m.MessageHeader.CorrelationID)
+	m.body = []byte(msg.MessageBody)
 	return json.Unmarshal(msg.MessageBody, m.MessageBody)
 }
 

@@ -143,7 +143,7 @@ func Test_exists_putFails(t *testing.T) {
 	if b.exists(m) {
 		t.Fatal("b.exists() should have returned false because the message *was* new to the system")
 	}
-	if entries := h.AllEntries(); len(entries) != 2 {
+	if entries := h.AllEntries(); len(entries) != 3 {
 		t.Fatalf("Expected 2 log entries in the logger, %d seen", len(entries))
 	}
 }
@@ -240,7 +240,7 @@ func newBroker_(t *testing.T, brokerName string) (*Broker, *logtest.Hook, backen
 		},
 	})
 	if err != nil {
-		t.Fatal("newBroker() broker creation failed:", err)
+		t.Fatalf("newBroker() broker creation failed: %s", err)
 	}
 	return b, logh, bc
 }

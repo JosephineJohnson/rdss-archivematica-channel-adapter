@@ -13,6 +13,7 @@ RUN set -x \
 RUN set -x \
 	&& addgroup -g 333 -S archivematica \
 	&& adduser -u 333 -h /var/lib/archivematica -S -G archivematica archivematica
+ENV RDSS_ARCHIVEMATICA_ADAPTER_BROKER.SCHEMAS_DIR /go/src/github.com/JiscRDSS/rdss-archivematica-channel-adapter/hack/schemas
 USER archivematica
 ENTRYPOINT ["/go/bin/rdss-archivematica-channel-adapter"]
 CMD ["help"]

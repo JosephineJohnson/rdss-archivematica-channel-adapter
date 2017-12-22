@@ -8,11 +8,11 @@ package broker
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/backend"
@@ -30,6 +30,7 @@ type Broker struct {
 	Vocabulary VocabularyService
 
 	repository Repository
+	validator  message.Validator
 
 	// Number of messages received.
 	count uint64
@@ -77,6 +78,11 @@ func New(backend backend.Backend, logger log.FieldLogger, config *Config) (*Brok
 	b.Metadata = &MetadataServiceOp{broker: b}
 	b.Vocabulary = &VocabularyServiceOp{broker: b}
 
+	// Set up validator.
+	if err := b.setUpSchemaValidator(config.SchemasDir); err != nil {
+		return nil, err
+	}
+
 	// Check queues
 	if err := b.checkQueues(); err != nil {
 		return nil, err
@@ -96,6 +102,13 @@ func (b *Broker) messageHandler(data []byte) error {
 		return nil
 	}
 
+	// Validate the message. Send to the invalid queue if it didn not validate.
+	if err := b.validateMessage(msg); err != nil {
+		b.queueInvalidMessage(data, bErrors.NewWithError(bErrors.GENERR001, err))
+		return nil
+	}
+
+	// Check that the message has not been received yet.
 	if b.exists(msg) {
 		b.logger.Debugf("Message discarded (already seen): %s", msg.ID())
 		return nil
@@ -143,6 +156,46 @@ func (b *Broker) messageHandler(data []byte) error {
 	}
 
 	return err
+}
+
+// setUpSchemaValidator sets up the JSON Schema validator. If the schemas
+// directory is empty the validator installed will be a no-op. If the validator
+// setup fails then we return an error.
+func (b *Broker) setUpSchemaValidator(schemasDir string) error {
+	if schemasDir == "" {
+		b.logger.Infoln("JSON Schema validator was not installed: `broker.schemas_dir` not indicated.")
+		b.validator = &message.NoOpValidator{}
+		return nil
+	}
+	var err error
+	b.validator, err = message.NewValidator(schemasDir)
+	if err != nil {
+		b.logger.Errorf("JSON Schema validator cannot be installed: %s", err)
+		return errors.Wrap(err, "json schema validator setup failed")
+	}
+	b.logger.Infoln("JSON Schema validator was installed successfully.")
+	for mtype, _ := range b.validator.Validators() {
+		b.logger.Debugf("JSON Schema for message type %s installed.", mtype)
+	}
+	return nil
+}
+
+// validateMessage returns an error if the message does not validate against
+// its schema.
+func (b *Broker) validateMessage(msg *message.Message) error {
+	res, err := b.validator.Validate(msg)
+	if err != nil {
+		return errors.Wrap(err, "validator failed")
+	}
+	if !res.Valid() {
+		count := len(res.Errors())
+		b.logger.Debugf("JSON Schema validator found %d issues in %s.", count, msg.ID())
+		for _, re := range res.Errors() {
+			b.logger.WithFields(log.Fields{"messageId": msg.ID()}).Debugf("- %s", re.Description())
+		}
+		return fmt.Errorf("message has unexpected format, %d errors found", count)
+	}
+	return nil
 }
 
 // exists returns whether the message is already in the repository. As a side
