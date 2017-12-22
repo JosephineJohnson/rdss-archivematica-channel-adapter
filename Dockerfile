@@ -1,10 +1,13 @@
 FROM golang:1.9.1-alpine
+ARG GITHUB_API_TOKEN
 WORKDIR /go/src/github.com/JiscRDSS/rdss-archivematica-channel-adapter
 COPY . .
 # Don't use `make testrace`, it won't work in Alpine Linux!
 RUN set -x \
 	&& apk add --no-cache ca-certificates \
-	&& apk add --no-cache --virtual .build-deps make gcc musl-dev git \
+	&& apk add --no-cache --virtual .build-deps \
+		make gcc musl-dev git bash curl \
+	&& ./hack/download-schemas.sh $GITHUB_API_TOKEN \
 	&& make test vet \
 	&& make install
 RUN set -x \
