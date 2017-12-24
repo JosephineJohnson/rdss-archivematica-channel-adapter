@@ -36,7 +36,7 @@ const (
       "machineAddress": "bar",
       "timestamp": "1997-07-16T19:20:00+01:00"
     },
-    "version": "1.2.1"
+    "version": "1.3.0"
   },
   "messageBody": {
     "objectUuid": "06f75186-f9cb-4be3-8df7-64dd037eb54f",
