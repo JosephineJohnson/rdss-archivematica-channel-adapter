@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/twinj/uuid"
 
@@ -29,6 +30,11 @@ const (
       "sequence": "",
       "position": 0,
       "total": 0
+    },
+    "messageHistory": {
+      "machineId": "foo",
+      "machineAddress": "bar",
+      "timestamp": "1997-07-16T19:20:00+01:00"
     },
     "version": "1.2.1"
   },
@@ -195,7 +201,12 @@ func TestMessage_ToJSON(t *testing.T) {
 					ID:           "e4bdaea0-4712-4682-8d4b-e6d92b1fe1ac",
 					MessageClass: MessageClassCommand,
 					MessageType:  MessageTypeMetadataCreate,
-					Version:      Version,
+					MessageHistory: MessageHistory{
+						MachineId:      "foo",
+						MachineAddress: "bar",
+						Timestamp:      Timestamp(time.Date(1997, time.July, 16, 19, 20, 0, 0, time.FixedZone("+0100", 3600))),
+					},
+					Version: Version,
 				},
 				MessageBody: &MetadataCreateRequest{
 					ResearchObject{
