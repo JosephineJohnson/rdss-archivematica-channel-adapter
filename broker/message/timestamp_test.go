@@ -79,6 +79,12 @@ func TestTimestampDecoding(t *testing.T) {
 			false,
 		},
 		{
+			[]byte(`{"prop": ""}`),
+			"Empty string",
+			time.Time{},
+			false,
+		},
+		{
 			[]byte(`{"prop": "2006-01-02TZ"}`),
 			"Unknown format",
 			time.Time{},

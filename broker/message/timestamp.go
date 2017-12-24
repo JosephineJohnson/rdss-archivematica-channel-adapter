@@ -19,19 +19,24 @@ func (t Timestamp) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 // The time is expected to be a quoted string in RFC 3339 format.
 func (t *Timestamp) UnmarshalJSON(data []byte) error {
+	str := string(data)
 	// Ignore null, like in the main JSON package.
-	if string(data) == "null" {
+	if str == "null" {
+		return nil
+	}
+	// Ignore emtpy string.
+	if str == "\"\"" {
 		return nil
 	}
 	// Fractional seconds are handled implicitly by Parse.
-	ts, err := time.Parse(`"`+time.RFC3339+`"`, string(data))
+	ts, err := time.Parse(`"`+time.RFC3339+`"`, str)
 	if err == nil {
 		*t = Timestamp(ts)
 		return nil
 	}
 	// Like time.RFC3339 without the second component which is accepted by RDSS.
 	const RFC3339woSec = "2006-01-02T15:04Z07:00"
-	ts, err = time.Parse(`"`+RFC3339woSec+`"`, string(data))
+	ts, err = time.Parse(`"`+RFC3339woSec+`"`, str)
 	if err == nil {
 		*t = Timestamp(ts)
 		return nil
