@@ -23,8 +23,8 @@ go-bindata \
 	-o "./broker/message/specdata/specdata.go" \
 	-nometadata \
 	-pkg "specdata" \
-	-prefix "./spec" \
-		"./spec/schemas/..." \
-		"./spec/messages/..."
+	-prefix "./message-api-spec" \
+		"./message-api-spec/schemas/..." \
+		"./message-api-spec/messages/..."
 
 go fmt ./broker/message/specdata/...
