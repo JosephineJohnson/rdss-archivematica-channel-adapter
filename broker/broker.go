@@ -79,7 +79,7 @@ func New(backend backend.Backend, logger log.FieldLogger, config *Config) (*Brok
 	b.Vocabulary = &VocabularyServiceOp{broker: b}
 
 	// Set up validator.
-	if err := b.setUpSchemaValidator(); err != nil {
+	if err := b.setUpSchemaValidator(config.Validation); err != nil {
 		return nil, err
 	}
 
@@ -159,7 +159,11 @@ func (b *Broker) messageHandler(data []byte) error {
 }
 
 // setUpSchemaValidator sets up the JSON Schema validator.
-func (b *Broker) setUpSchemaValidator() (err error) {
+func (b *Broker) setUpSchemaValidator(enabled bool) (err error) {
+	if !enabled {
+		b.validator = &message.NoOpValidator{}
+		return nil
+	}
 	if b.validator, err = message.NewValidator(); err != nil {
 		return err
 	}

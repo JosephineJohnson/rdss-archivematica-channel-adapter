@@ -169,3 +169,16 @@ func decodeJson(r io.Reader) (interface{}, error) {
 	}
 	return document, nil
 }
+
+// NoOpValidator is a validator that recognizes all messages as valid.
+type NoOpValidator struct{}
+
+// Validate implementes Validator.
+func (v NoOpValidator) Validate(msg *Message) (*gojsonschema.Result, error) {
+	return &gojsonschema.Result{}, nil
+}
+
+// Validators implementes Validator.
+func (v NoOpValidator) Validators() map[string]*gojsonschema.Schema {
+	return map[string]*gojsonschema.Schema{}
+}

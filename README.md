@@ -141,6 +141,12 @@ When `PUBLISHER.TLS` is set to `true`, this is used to describe the location of 
 
 The name of the backend used as the RDSS broker. `"kinesis"` is the backend currently supported in addition to "backendmock"`, developed for testing purposes only.
 
+:heavy_minus_sign: `BROKER.VALIDATION`
+
+> Default: `true`
+
+When set to `true`, the adapter will validate incoming messages against the canonical schema documents. It is discouraged to disable it.
+
 :heavy_minus_sign: `BROKER.QUEUES.MAIN`
 
 > Default: `"main"`

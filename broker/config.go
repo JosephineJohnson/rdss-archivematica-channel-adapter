@@ -7,6 +7,7 @@ type Config struct {
 	QueueInvalid     string
 	QueueError       string
 	RepositoryConfig *RepositoryConfig
+	Validation       bool
 }
 
 type RepositoryConfig struct {

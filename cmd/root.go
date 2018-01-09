@@ -44,6 +44,7 @@ tls_key_file = ""
 
 [broker]
 backend = "kinesis"
+validation = true
 
 [broker.queues]
 main = "main"
