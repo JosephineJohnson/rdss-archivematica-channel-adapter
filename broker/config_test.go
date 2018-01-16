@@ -1,6 +1,8 @@
 package broker
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
@@ -58,5 +60,24 @@ func TestConfig_Validate(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestConfig_SetValidationMode(t *testing.T) {
+	testCases := []struct {
+		input string
+		want  ValidationMode
+	}{
+		{"false", ValidationModeDisabled},
+		{"warnings", ValidationModeWarnings},
+		{"true", ValidationModeStrict},
+		{"", ValidationModeStrict},
+	}
+	config := &Config{}
+	for _, tc := range testCases {
+		config.SetValidationMode(tc.input)
+		if have := config.Validation; have != tc.want {
+			t.Errorf("SetValidationMode(); given %s, have %v, want %v", tc.input, have, tc.want)
+		}
 	}
 }

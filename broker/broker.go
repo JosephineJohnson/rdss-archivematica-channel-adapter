@@ -79,7 +79,7 @@ func New(backend backend.Backend, logger log.FieldLogger, config *Config) (*Brok
 	b.Vocabulary = &VocabularyServiceOp{broker: b}
 
 	// Set up validator.
-	if err := b.setUpSchemaValidator(config.Validation); err != nil {
+	if err := b.setUpSchemaValidator(); err != nil {
 		return nil, err
 	}
 
@@ -159,16 +159,17 @@ func (b *Broker) messageHandler(data []byte) error {
 }
 
 // setUpSchemaValidator sets up the JSON Schema validator.
-func (b *Broker) setUpSchemaValidator(enabled bool) (err error) {
-	if !enabled {
+func (b *Broker) setUpSchemaValidator() (err error) {
+	if b.config.Validation == ValidationModeDisabled {
 		b.validator = &message.NoOpValidator{}
+		b.logger.Warningf("JSON Schema validator is disabled.")
 		return nil
 	}
 	if b.validator, err = message.NewValidator(); err != nil {
 		return err
 	}
 	b.logger.Infoln("JSON Schema validator installed successfully.")
-	for mtype, _ := range b.validator.Validators() {
+	for mtype := range b.validator.Validators() {
 		b.logger.Debugf("JSON Schema for message type %s installed.", mtype)
 	}
 	return err
@@ -181,15 +182,18 @@ func (b *Broker) validateMessage(msg *message.Message) error {
 	if err != nil {
 		return errors.Wrap(err, "validator failed")
 	}
-	if !res.Valid() {
-		count := len(res.Errors())
-		b.logger.Debugf("JSON Schema validator found %d issues in %s.", count, msg.ID())
-		for _, re := range res.Errors() {
-			b.logger.WithFields(log.Fields{"messageId": msg.ID()}).Debugf("- %s", re.Description())
-		}
-		return fmt.Errorf("message has unexpected format, %d errors found", count)
+	if res.Valid() {
+		return nil
 	}
-	return nil
+	count := len(res.Errors())
+	b.logger.Debugf("JSON Schema validator found %d issues in %s.", count, msg.ID())
+	for _, re := range res.Errors() {
+		b.logger.WithFields(log.Fields{"messageId": msg.ID()}).Debugf("- %s", re.Description())
+	}
+	if b.config.Validation != ValidationModeStrict {
+		return nil
+	}
+	return fmt.Errorf("message has unexpected format, %d errors found", count)
 }
 
 // exists returns whether the message is already in the repository. As a side

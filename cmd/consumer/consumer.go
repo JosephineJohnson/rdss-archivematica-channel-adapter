@@ -109,7 +109,6 @@ func createBrokerClient() (*broker.Broker, error) {
 		QueueInvalid:     viper.GetString("broker.queues.invalid"),
 		QueueError:       viper.GetString("broker.queues.error"),
 		RepositoryConfig: repoConfig,
-		Validation:       viper.GetBool("broker.validation"),
 	}
 	if repoConfig.Backend == "dynamodb" {
 		repoConfig.DynamoDBEndpoint = viper.GetString("broker.repository.dynamodb_endpoint")
@@ -117,6 +116,7 @@ func createBrokerClient() (*broker.Broker, error) {
 		repoConfig.DynamoDBTable = viper.GetString("broker.repository.dynamodb_table")
 		repoConfig.DynamoDBTLS = viper.GetBool("broker.repository.dynamodb_tls")
 	}
+	brokerConfig.SetValidationMode(viper.GetString("broker.validation"))
 
 	return broker.New(ba, logger, brokerConfig)
 }

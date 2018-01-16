@@ -145,7 +145,11 @@ The name of the backend used as the RDSS broker. `"kinesis"` is the backend curr
 
 > Default: `true`
 
-When set to `true`, the adapter will validate incoming messages against the canonical schema documents. It is discouraged to disable it.
+The adapter implements a message validator that uses the canonical RDSS JSON Schema documents. The validator can be configured in the following ways:
+
+- When set to `true`, the adapter will reject invalid messages and the validation issues will be logged with `DEBUG` level.
+- When set to `warnings`, the adapter will not reject invalid messages but the validation issues will be logged with `DEBUG` level.
+- When set to `false`, message validation will not be performed.
 
 :heavy_minus_sign: `BROKER.QUEUES.MAIN`
 
