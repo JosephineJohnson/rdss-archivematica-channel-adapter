@@ -45,6 +45,9 @@ type messageAlias struct {
 }
 
 func (m *Message) ID() string {
+	if m.MessageHeader.ID == nil {
+		return ""
+	}
 	return m.MessageHeader.ID.String()
 }
 
