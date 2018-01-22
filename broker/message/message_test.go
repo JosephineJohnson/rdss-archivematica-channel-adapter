@@ -396,11 +396,8 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 			}
 
 			body := typedBody(tt.t, correlationId)
-			t.Skip("See https://github.com/JiscRDSS/rdss-message-api-specification/pull/77")
-			{
-				if err := dec.Decode(body); err != nil {
-					t.Fatal("decoding failed:", err)
-				}
+			if err := dec.Decode(body); err != nil {
+				t.Fatal("decoding failed:", err)
 			}
 
 			// Test typed body getter
@@ -417,20 +414,17 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 			}
 
 			// Validation test
-			t.Skip("See https://github.com/JiscRDSS/rdss-message-api-specification/pull/67")
-			{
-				msg = New(tt.t, tt.c)
-				msg.body = blob
-				res, err := validator.Validate(msg)
-				if err != nil {
-					t.Fatal("validator failed:", err)
+			msg = New(tt.t, tt.c)
+			msg.body = blob
+			res, err := validator.Validate(msg)
+			if err != nil {
+				t.Fatal("validator failed:", err)
+			}
+			if !res.Valid() {
+				for _, err := range res.Errors() {
+					t.Log("validation error:", err)
 				}
-				if !res.Valid() {
-					for _, err := range res.Errors() {
-						t.Log("validation error:", err)
-					}
-					t.Error("validator reported that the message is not valid")
-				}
+				t.Error("validator reported that the message is not valid")
 			}
 		})
 	}
