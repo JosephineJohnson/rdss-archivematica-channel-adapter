@@ -48,14 +48,22 @@ const (
           "personUuid": "8468f86b-a936-41b3-a8a7-ef37e3008ba8",
           "personIdentifier": null,
           "personEntitlement": null,
-          "personOrganisation": null,
           "personAffiliation": null,
           "personGivenName": "Zhang, Shiyu",
           "personCn": "",
           "personSn": "",
           "personTelephoneNumber": "",
           "personMail": "",
-          "personOu": ""
+          "personOrganisationUnit": {
+            "organisationUnitUuid": null,
+            "organisationUnitName": "",
+            "organisation": {
+              "organisationJiscId": 0,
+              "organisationName": "",
+              "organisationType": 0,
+              "organisationAddress": ""
+            }
+          }
         },
         "role": 5
       }
@@ -77,6 +85,7 @@ const (
         "relationType": 8
       }
     ],
+    "objectOrganisationRole": null,
     "objectFile": [
       {
         "fileUuid": "f8351e4f-66cc-4434-b0f1-54e7038c031a",
@@ -110,7 +119,12 @@ const (
           "dateType": 0
         },
         "fileStorageLocation": "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
-        "fileStorageType": 1
+        "fileStoragePlatform": {
+          "storagePlatformUuid": "f2939501-2b2d-4e5c-9197-0daa57ccb621",
+          "storagePlatformName": "string",
+          "storagePlatformType": 1,
+          "storagePlatformCost": "string"
+        }
       },
       {
         "fileUuid": "c23d70ee-cc6b-4698-8d4c-9dcaefb40672",
@@ -144,7 +158,12 @@ const (
           "dateType": 0
         },
         "fileStorageLocation": "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
-        "fileStorageType": 1
+        "fileStoragePlatform": {
+          "storagePlatformUuid": "f2939501-2b2d-4e5c-9197-0daa57ccb621",
+          "storagePlatformName": "string",
+          "storagePlatformType": 1,
+          "storagePlatformCost": "string"
+        }
       }
     ]
   }
@@ -257,7 +276,12 @@ func TestMessage_ToJSON(t *testing.T) {
 									},
 								},
 								FileStorageLocation: "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
-								FileStorageType:     1,
+								FileStoragePlatform: FileStoragePlatform{
+									StoragePlatformUuid: MustUUID("f2939501-2b2d-4e5c-9197-0daa57ccb621"),
+									StoragePlatformName: "string",
+									StoragePlatformType: 1,
+									StoragePlatformCost: "string",
+								},
 							},
 							{
 								FileUUID:       MustUUID("c23d70ee-cc6b-4698-8d4c-9dcaefb40672"),
@@ -271,7 +295,12 @@ func TestMessage_ToJSON(t *testing.T) {
 									},
 								},
 								FileStorageLocation: "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
-								FileStorageType:     1,
+								FileStoragePlatform: FileStoragePlatform{
+									StoragePlatformUuid: MustUUID("f2939501-2b2d-4e5c-9197-0daa57ccb621"),
+									StoragePlatformName: "string",
+									StoragePlatformType: 1,
+									StoragePlatformCost: "string",
+								},
 							},
 						},
 					},

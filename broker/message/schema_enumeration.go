@@ -181,6 +181,7 @@ const (
 	IdentifierTypeEnum_PMID
 	IdentifierTypeEnum_PUID
 	IdentifierTypeEnum_PURL
+	IdentifierTypeEnum_SourceID
 	IdentifierTypeEnum_UPC
 	IdentifierTypeEnum_URL
 	IdentifierTypeEnum_URN
@@ -218,6 +219,8 @@ func (t IdentifierTypeEnum) String() string {
 		return "PUID"
 	case IdentifierTypeEnum_PURL:
 		return "PURL"
+	case IdentifierTypeEnum_SourceID:
+		return "SourceID"
 	case IdentifierTypeEnum_UPC:
 		return "UPC"
 	case IdentifierTypeEnum_URL:
