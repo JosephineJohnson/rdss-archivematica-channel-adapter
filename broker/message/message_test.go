@@ -459,6 +459,47 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 	}
 }
 
+func TestMessage_OtherFixtures(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pathFixture string
+		pathSchema  string
+		value       interface{}
+	}{
+		{
+			"Header sample",
+			"messages/header/header.json",
+			"messages/header/header_schema.json",
+			MessageHeader{},
+		},
+		{
+			"Message sample",
+			"messages/message.json",
+			"messages/message_schema.json",
+			New(MessageTypeMetadataCreate, MessageClassCommand),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			blob := specdata.MustAsset(tc.pathFixture)
+			json.Unmarshal(blob, tc.value)
+
+			if msg, ok := tc.value.(Message); ok {
+				res, err := getValidator(t).Validate(&msg)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !res.Valid() {
+					for _, err := range res.Errors() {
+						t.Log("validation error:", err)
+					}
+					t.Error("validator reported that the message is not valid")
+				}
+			}
+		})
+	}
+}
+
 func getValidator(t *testing.T) Validator {
 	validator, err := NewValidator()
 	if err != nil {
