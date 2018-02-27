@@ -37,7 +37,7 @@ const (
         "timestamp": "1997-07-16T19:20:00+01:00"
       }
     ],
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "messageBody": {
     "objectUuid": "be8eff14-a92b-429e-80b8-0ec4594d72c0",
@@ -48,14 +48,22 @@ const (
           "personUuid": "8468f86b-a936-41b3-a8a7-ef37e3008ba8",
           "personIdentifier": null,
           "personEntitlement": null,
-          "personOrganisation": null,
           "personAffiliation": null,
           "personGivenName": "Zhang, Shiyu",
           "personCn": "",
           "personSn": "",
           "personTelephoneNumber": "",
           "personMail": "",
-          "personOu": ""
+          "personOrganisationUnit": {
+            "organisationUnitUuid": null,
+            "organisationUnitName": "",
+            "organisation": {
+              "organisationJiscId": 0,
+              "organisationName": "",
+              "organisationType": 0,
+              "organisationAddress": ""
+            }
+          }
         },
         "role": 5
       }
@@ -77,6 +85,7 @@ const (
         "relationType": 8
       }
     ],
+    "objectOrganisationRole": null,
     "objectFile": [
       {
         "fileUuid": "f8351e4f-66cc-4434-b0f1-54e7038c031a",
@@ -110,7 +119,12 @@ const (
           "dateType": 0
         },
         "fileStorageLocation": "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
-        "fileStorageType": 1
+        "fileStoragePlatform": {
+          "storagePlatformUuid": "f2939501-2b2d-4e5c-9197-0daa57ccb621",
+          "storagePlatformName": "string",
+          "storagePlatformType": 1,
+          "storagePlatformCost": "string"
+        }
       },
       {
         "fileUuid": "c23d70ee-cc6b-4698-8d4c-9dcaefb40672",
@@ -144,7 +158,12 @@ const (
           "dateType": 0
         },
         "fileStorageLocation": "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
-        "fileStorageType": 1
+        "fileStoragePlatform": {
+          "storagePlatformUuid": "f2939501-2b2d-4e5c-9197-0daa57ccb621",
+          "storagePlatformName": "string",
+          "storagePlatformType": 1,
+          "storagePlatformCost": "string"
+        }
       }
     ]
   }
@@ -257,7 +276,12 @@ func TestMessage_ToJSON(t *testing.T) {
 									},
 								},
 								FileStorageLocation: "s3://rdss-prod-figshare-0132/woodpigeon-pic.jpg",
-								FileStorageType:     1,
+								FileStoragePlatform: FileStoragePlatform{
+									StoragePlatformUuid: MustUUID("f2939501-2b2d-4e5c-9197-0daa57ccb621"),
+									StoragePlatformName: "string",
+									StoragePlatformType: 1,
+									StoragePlatformCost: "string",
+								},
 							},
 							{
 								FileUUID:       MustUUID("c23d70ee-cc6b-4698-8d4c-9dcaefb40672"),
@@ -271,7 +295,12 @@ func TestMessage_ToJSON(t *testing.T) {
 									},
 								},
 								FileStorageLocation: "s3://rdss-prod-figshare-0132/bird-sounds.mp3",
-								FileStorageType:     1,
+								FileStoragePlatform: FileStoragePlatform{
+									StoragePlatformUuid: MustUUID("f2939501-2b2d-4e5c-9197-0daa57ccb621"),
+									StoragePlatformName: "string",
+									StoragePlatformType: 1,
+									StoragePlatformCost: "string",
+								},
 							},
 						},
 					},
@@ -396,11 +425,8 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 			}
 
 			body := typedBody(tt.t, correlationId)
-			t.Skip("See https://github.com/JiscRDSS/rdss-message-api-specification/pull/77")
-			{
-				if err := dec.Decode(body); err != nil {
-					t.Fatal("decoding failed:", err)
-				}
+			if err := dec.Decode(body); err != nil {
+				t.Fatal("decoding failed:", err)
 			}
 
 			// Test typed body getter
@@ -417,13 +443,51 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 			}
 
 			// Validation test
-			t.Skip("See https://github.com/JiscRDSS/rdss-message-api-specification/pull/67")
-			{
-				msg = New(tt.t, tt.c)
-				msg.body = blob
-				res, err := validator.Validate(msg)
+			msg = New(tt.t, tt.c)
+			msg.body = blob
+			res, err := validator.Validate(msg)
+			if err != nil {
+				t.Fatal("validator failed:", err)
+			}
+			if !res.Valid() {
+				for _, err := range res.Errors() {
+					t.Log("validation error:", err)
+				}
+				t.Error("validator reported that the message is not valid")
+			}
+		})
+	}
+}
+
+func TestMessage_OtherFixtures(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pathFixture string
+		pathSchema  string
+		value       interface{}
+	}{
+		{
+			"Header sample",
+			"messages/header/header.json",
+			"messages/header/header_schema.json",
+			MessageHeader{},
+		},
+		{
+			"Message sample",
+			"messages/message.json",
+			"messages/message_schema.json",
+			New(MessageTypeMetadataCreate, MessageClassCommand),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			blob := specdata.MustAsset(tc.pathFixture)
+			json.Unmarshal(blob, tc.value)
+
+			if msg, ok := tc.value.(Message); ok {
+				res, err := getValidator(t).Validate(&msg)
 				if err != nil {
-					t.Fatal("validator failed:", err)
+					t.Fatal(err)
 				}
 				if !res.Valid() {
 					for _, err := range res.Errors() {

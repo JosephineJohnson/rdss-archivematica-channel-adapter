@@ -13,7 +13,7 @@ type ResearchObject struct {
 	ObjectValue             ObjectValueEnum     `json:"objectValue"`
 	ObjectIdentifier        []Identifier        `json:"objectIdentifier"`
 	ObjectRelatedIdentifier []Identifier        `json:"objectRelatedIdentifier,omitempty"`
-	ObjectOrganisationRole  []OrganisationRole  `json:"objectOrganisationRole,omitempty"`
+	ObjectOrganisationRole  []OrganisationRole  `json:"objectOrganisationRole"`
 	ObjectPreservationEvent []PreservationEvent `json:"objectPreservationEvent,omitempty"`
 	ObjectFile              []File              `json:"objectFile,omitempty"`
 }

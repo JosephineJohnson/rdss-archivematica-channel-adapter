@@ -21,7 +21,7 @@ type File struct {
 	FileLastDownload        Date                `json:"fileLastDownloaded,omitempty"`
 	FileTechnicalAttributes []string            `json:"fileTechnicalAttributes,omitempty"`
 	FileStorageLocation     string              `json:"fileStorageLocation"`
-	FileStorageType         StorageTypeEnum     `json:"fileStorageType"`
+	FileStoragePlatform     FileStoragePlatform `json:"fileStoragePlatform"`
 }
 
 type Checksum struct {
@@ -34,6 +34,13 @@ type PreservationEvent struct {
 	PreservationEventValue  string                    `json:"preservationEventValue"`
 	PreservationEventType   PreservationEventTypeEnum `json:"preservationEventType"`
 	PreservationEventDetail string                    `json:"preservationEventDetail,omitempty"`
+}
+
+type FileStoragePlatform struct {
+	StoragePlatformUuid *UUID           `json:"storagePlatformUuid"`
+	StoragePlatformName string          `json:"storagePlatformName"`
+	StoragePlatformType StorageTypeEnum `json:"storagePlatformType"`
+	StoragePlatformCost string          `json:"storagePlatformCost"`
 }
 
 type Permission struct {
@@ -62,7 +69,6 @@ type Grant struct {
 	GrantFunder     OrganisationRole `json:"grantFunder"`
 	GrantStart      Date             `json:"grantStart"`
 	GrantEnd        Date             `json:"grantEnd"`
-	GrantValue      string           `json:"grantValue"`
 }
 
 type Project struct {

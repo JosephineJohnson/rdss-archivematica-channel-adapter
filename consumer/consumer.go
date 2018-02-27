@@ -110,7 +110,7 @@ func (c *ConsumerImpl) handleMetadataCreateRequest(msg *message.Message) error {
 				return
 			}
 			defer f.Close()
-			if err = downloadFile(c.logger, c.ctx, c.s3, http.DefaultClient, f, file.FileStorageType, file.FileStorageLocation, nil); err != nil {
+			if err = downloadFile(c.logger, c.ctx, c.s3, http.DefaultClient, f, file.FileStoragePlatform.StoragePlatformType, file.FileStorageLocation, nil); err != nil {
 				return
 			}
 			describeFile(t, file.FileName, &file)
