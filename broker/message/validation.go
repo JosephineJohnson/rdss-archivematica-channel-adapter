@@ -14,6 +14,11 @@ import (
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/message/specdata"
 )
 
+func init() {
+	// The checker provider by the library isn't perfect.
+	gojsonschema.FormatCheckers.Add("email", EmailFormatChecker{})
+}
+
 type Validator interface {
 	// Validate returns the results of validating a document against its schema.
 	// The error returned is non-nil when the validation process failed. If nil,
@@ -183,4 +188,23 @@ func (v NoOpValidator) Validate(msg *Message) (*gojsonschema.Result, error) {
 // Validators implementes Validator.
 func (v NoOpValidator) Validators() map[string]*gojsonschema.Schema {
 	return map[string]*gojsonschema.Schema{}
+}
+
+// EmailFormatChecker is a custom emailFormatChecker. The one provided by the
+// gojsonschema library is perfect but we want to support the edge case
+// "person@net" which is used in the spec. It's considered valid by in the spec
+// test suite (Python's jsonschema package).
+type EmailFormatChecker struct{}
+
+// IsFormat implements gojsonschema.FormatChecker.
+func (f EmailFormatChecker) IsFormat(input interface{}) bool {
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+	const addressUsedInSpecExamples = "person@net"
+	if asString == addressUsedInSpecExamples {
+		return true
+	}
+	return gojsonschema.FormatCheckers.IsFormat("email", asString)
 }
