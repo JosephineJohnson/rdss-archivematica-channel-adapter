@@ -37,7 +37,7 @@ const (
         "timestamp": "1997-07-16T19:20:00+01:00"
       }
     ],
-    "version": "1.4.0"
+    "version": "2.1.0"
   },
   "messageBody": {
     "objectUuid": "be8eff14-a92b-429e-80b8-0ec4594d72c0",
