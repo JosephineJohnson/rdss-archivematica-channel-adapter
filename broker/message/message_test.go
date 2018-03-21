@@ -419,31 +419,15 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 			blob := specdata.MustAsset(tt.pathFixture)
 			dec := json.NewDecoder(bytes.NewReader(blob))
 
-			var correlationId string
+			var correlationID string
 			if tt.isResponse {
-				correlationId = "bddccd20-f548-11e7-be52-730af1229478"
-			}
-
-			body := typedBody(tt.t, correlationId)
-			if err := dec.Decode(body); err != nil {
-				t.Fatal("decoding failed:", err)
-			}
-
-			// Test typed body getter
-			msg := &Message{MessageBody: body}
-			if ret := reflect.ValueOf(msg).MethodByName(tt.name).Call([]reflect.Value{}); !ret[1].IsNil() {
-				err := ret[1].Interface().(error)
-				t.Fatal("returned unexpected error:", err)
-			}
-
-			// Same with invalid type
-			msg = &Message{MessageBody: struct{}{}}
-			if ret := reflect.ValueOf(msg).MethodByName(tt.name).Call([]reflect.Value{}); ret[1].IsNil() {
-				t.Fatal("expected interface conversion error wasn't returned")
+				correlationID = "bddccd20-f548-11e7-be52-730af1229478"
 			}
 
 			// Validation test
-			msg = New(tt.t, tt.c)
+			msg := New(tt.t, tt.c)
+			msg.MessageHeader.CorrelationID = correlationID
+			msg.MessageBody = typedBody(tt.t, correlationID)
 			msg.body = blob
 			res, err := validator.Validate(msg)
 			if err != nil {
@@ -454,6 +438,23 @@ func TestMessage_DecodeFixtures(t *testing.T) {
 					t.Log("validation error:", err)
 				}
 				t.Error("validator reported that the message is not valid")
+			}
+
+			// Test that decoding works.
+			if err := dec.Decode(msg.MessageBody); err != nil {
+				t.Fatal("decoding failed:", err)
+			}
+
+			// Test the getter.
+			if ret := reflect.ValueOf(msg).MethodByName(tt.name).Call([]reflect.Value{}); !ret[1].IsNil() {
+				err := ret[1].Interface().(error)
+				t.Fatal("returned unexpected error:", err)
+			}
+
+			// Same with invalid type
+			msg = &Message{MessageBody: struct{}{}}
+			if ret := reflect.ValueOf(msg).MethodByName(tt.name).Call([]reflect.Value{}); ret[1].IsNil() {
+				t.Fatal("expected interface conversion error wasn't returned")
 			}
 		})
 	}
