@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -44,6 +45,7 @@ var _ Validator = rdssValidator{}
 var rdssPrefix = "https://www.jisc.ac.uk/rdss/schema/"
 
 var rdssSchemas = map[string]string{
+	"header":                 "https://www.jisc.ac.uk/rdss/schema/messages/header/header_schema.json",
 	"MetadataCreateRequest":  "https://www.jisc.ac.uk/rdss/schema/messages/body/metadata/create/request_schema.json",
 	"MetadataDeleteRequest":  "https://www.jisc.ac.uk/rdss/schema/messages/body/metadata/delete/request_schema.json",
 	"MetadataReadRequest":    "https://www.jisc.ac.uk/rdss/schema/messages/body/metadata/read/request_schema.json",
@@ -73,6 +75,10 @@ func rdssSchemaDocFinder(source string) ([]byte, error) {
 
 // resolveSchemaRef knows the path of the schema assets in the specdata pkg.
 func resolveSchemaRef(source string) string {
+	// See https://github.com/JiscRDSS/rdss-message-api-specification/issues/99.
+	if source == "https://www.jisc.ac.uk/rdss/schema/messages/header/header_schema.json/" {
+		return "schemas/header.json"
+	}
 	source = strings.TrimSuffix(source, "/")
 	source = strings.TrimPrefix(source, rdssPrefix)
 	if !strings.HasPrefix(source, "messages/") {
@@ -100,12 +106,43 @@ func NewValidator() (Validator, error) {
 	return v, nil
 }
 
-// Validate implementes Validator.
+// Validate implementes Validator. It aggregates the results of both the header
+// and the body validation results.
 func (v rdssValidator) Validate(msg *Message) (*gojsonschema.Result, error) {
-	loader := gojsonschema.NewBytesLoader(msg.body)
-	val, ok := v.validators[msg.Type()]
+	res, err := v.validateBody(msg.body, msg.Type())
+	if err != nil {
+		return nil, err
+	}
+	if len(msg.header) == 0 {
+		return res, nil
+	}
+	hr, err := v.validateHeader(msg.header)
+	if err != nil {
+		return nil, err
+	}
+	if !hr.Valid() {
+		for _, item := range hr.Errors() {
+			res.AddError(item, item.Details())
+		}
+	}
+	return res, err
+}
+
+func (v rdssValidator) validateHeader(data []byte) (*gojsonschema.Result, error) {
+	const schema = "header"
+	loader := gojsonschema.NewBytesLoader(data)
+	val, ok := v.validators[schema]
 	if !ok {
-		return nil, fmt.Errorf("validator for %s does not exist", msg.Type())
+		return nil, fmt.Errorf("validator for %s does not exist", schema)
+	}
+	return val.Validate(loader)
+}
+
+func (v rdssValidator) validateBody(data []byte, mType string) (*gojsonschema.Result, error) {
+	loader := gojsonschema.NewBytesLoader(data)
+	val, ok := v.validators[mType]
+	if !ok {
+		return nil, fmt.Errorf("validator for %s does not exist", mType)
 	}
 	return val.Validate(loader)
 }
@@ -207,4 +244,33 @@ func (f EmailFormatChecker) IsFormat(input interface{}) bool {
 		return true
 	}
 	return gojsonschema.FormatCheckers.IsFormat("email", asString)
+}
+
+// See https://github.com/JiscRDSS/rdss-message-api-specification/commit/81af7c27c4adb10bba05ced436347789e67d6a14.
+const regex = "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+\\.)*[0-9A-Za-z-]+)?(\\+([0-9A-Za-z-]+\\.)*[0-9A-Za-z-]+)?$"
+
+var versionRegexp = regexp.MustCompile(regex)
+
+type VersionInvalidError struct {
+	gojsonschema.ResultErrorFields
+}
+
+// ValidateVersion validates a version string.
+//
+// Our jsonschema library doesn't seem to support patterns. It could be
+// possible to have the spec changed so it uses the "regex" format instead but
+// for now we're just going to be validating this attribute manually.
+func ValidateVersion(ver string, result *gojsonschema.Result) {
+	if versionRegexp.MatchString(ver) {
+		// Stop here if we have a match.
+		return
+	}
+	details := gojsonschema.ErrorDetails{}
+	err := &VersionInvalidError{}
+	err.SetContext(gojsonschema.NewJsonContext("version", nil))
+	err.SetType("invalid_version")
+	err.SetValue(ver)
+	err.SetDetails(details)
+	err.SetDescriptionFormat("Invalid version format")
+	result.AddError(err, details)
 }

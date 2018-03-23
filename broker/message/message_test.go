@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/twinj/uuid"
+	"github.com/xeipuuv/gojsonschema"
 
 	bErrors "github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/errors"
 	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/message/specdata"
@@ -37,7 +38,8 @@ const (
         "timestamp": "1997-07-16T19:20:00+01:00"
       }
     ],
-    "version": "2.1.0"
+    "version": "2.1.0",
+    "generator": "Test"
   },
   "messageBody": {
     "objectUuid": "be8eff14-a92b-429e-80b8-0ec4594d72c0",
@@ -233,7 +235,8 @@ func TestMessage_ToJSON(t *testing.T) {
 						Position: 0,
 						Total:    0,
 					},
-					Version: Version,
+					Version:   Version,
+					Generator: "Test",
 				},
 				MessageBody: &MetadataCreateRequest{
 					ResearchObject{
@@ -468,12 +471,6 @@ func TestMessage_OtherFixtures(t *testing.T) {
 		value       interface{}
 	}{
 		{
-			"Header sample",
-			"messages/header/header.json",
-			"messages/header/header_schema.json",
-			MessageHeader{},
-		},
-		{
 			"Message sample",
 			"messages/message.json",
 			"messages/message_schema.json",
@@ -483,22 +480,32 @@ func TestMessage_OtherFixtures(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			blob := specdata.MustAsset(tc.pathFixture)
-			json.Unmarshal(blob, tc.value)
-
-			if msg, ok := tc.value.(Message); ok {
-				res, err := getValidator(t).Validate(&msg)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !res.Valid() {
-					for _, err := range res.Errors() {
-						t.Log("validation error:", err)
-					}
-					t.Error("validator reported that the message is not valid")
-				}
+			if err := json.Unmarshal(blob, &tc.value); err != nil {
+				t.Fatal(err)
 			}
+			msg, ok := tc.value.(*Message)
+			if !ok {
+				t.Fatalf("value has not the expected type")
+			}
+			res, err := getValidator(t).Validate(msg)
+			assertResults(t, res, err)
 		})
 	}
+}
+
+func TestMessage_OtherFixtures_Header(t *testing.T) {
+	header := specdata.MustAsset("messages/header/header.json")
+	body := specdata.MustAsset("messages/body/metadata/create/request.json")
+	blob := []byte(`{
+		"messageHeader": ` + string(header) + `,
+		"messageBody": ` + string(body) + `
+	}`)
+	msg := &Message{}
+	if err := json.Unmarshal(blob, msg); err != nil {
+		t.Fatal(err)
+	}
+	res, err := getValidator(t).Validate(msg)
+	assertResults(t, res, err)
 }
 
 func getValidator(t *testing.T) Validator {
@@ -507,4 +514,16 @@ func getValidator(t *testing.T) Validator {
 		t.Fatal(err)
 	}
 	return validator
+}
+
+func assertResults(t *testing.T, res *gojsonschema.Result, err error) {
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Valid() {
+		for _, err := range res.Errors() {
+			t.Log("validation error:", err)
+		}
+		t.Error("validator reported that the message is not valid")
+	}
 }

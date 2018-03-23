@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"reflect"
 	"strings"
+	"time"
 
 	bErrors "github.com/JiscRDSS/rdss-archivematica-channel-adapter/broker/errors"
+	"github.com/JiscRDSS/rdss-archivematica-channel-adapter/version"
 )
 
 // Message represents RDSS messages.
@@ -16,21 +18,32 @@ type Message struct {
 	// MessageBody carries the message payload.
 	MessageBody interface{}
 
-	// body contains the source bytes of the payload. This is needed by the
-	// validator so it can send the stream of bytes to gojsonschema, e.g.:
+	// Raw payload streams using during validation (gojsonschema), e.g.:
 	//	loader := gojsonschema.NewBytesLoader(msg.body)
 	//	validator.Validate(loader)
-	body []byte
+	header []byte
+	body   []byte
 }
 
 // New returns a pointer to a new message with a new ID.
 func New(t MessageType, c MessageClass) *Message {
+	now := time.Now()
 	return &Message{
 		MessageHeader: MessageHeader{
 			ID:           NewUUID(),
-			MessageType:  t,
 			MessageClass: c,
-			Version:      Version,
+			MessageType:  t,
+			MessageTimings: MessageTimings{
+				PublishedTimestamp:  Timestamp(now),
+				ExpirationTimestamp: Timestamp(now.AddDate(0, 1, 0)), // One month later.
+			},
+			MessageSequence: MessageSequence{
+				Sequence: NewUUID(),
+				Position: 1,
+				Total:    1,
+			},
+			Version:   Version,
+			Generator: version.AppVersion(),
 		},
 		MessageBody: typedBody(t, ""),
 	}
@@ -40,7 +53,7 @@ func New(t MessageType, c MessageClass) *Message {
 // - Delay JSON decoding.
 // - Precompute JSON encoding.
 type messageAlias struct {
-	MessageHeader MessageHeader   `json:"messageHeader"`
+	MessageHeader json.RawMessage `json:"messageHeader"`
 	MessageBody   json.RawMessage `json:"messageBody"`
 }
 
@@ -79,11 +92,15 @@ func (m *Message) TagError(err error) {
 
 // MarshalJSON implements Marshaler.
 func (m *Message) MarshalJSON() ([]byte, error) {
+	header, err := json.Marshal(m.MessageHeader)
+	if err != nil {
+		return nil, err
+	}
 	body, err := json.Marshal(m.MessageBody)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&messageAlias{m.MessageHeader, json.RawMessage(body)})
+	return json.Marshal(&messageAlias{json.RawMessage(header), json.RawMessage(body)})
 }
 
 // UnmarshalJSON implements Unmarshaler.
@@ -92,8 +109,11 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return err
 	}
-	m.MessageHeader = msg.MessageHeader
+	if err := json.Unmarshal(msg.MessageHeader, &m.MessageHeader); err != nil {
+		return err
+	}
 	m.MessageBody = typedBody(m.MessageHeader.MessageType, m.MessageHeader.CorrelationID)
+	m.header = []byte(msg.MessageHeader)
 	m.body = []byte(msg.MessageBody)
 	return json.Unmarshal(msg.MessageBody, m.MessageBody)
 }

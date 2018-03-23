@@ -185,6 +185,8 @@ func (b *Broker) validateMessage(msg *message.Message) error {
 	if res.Valid() {
 		return nil
 	}
+	message.ValidateVersion(msg.MessageHeader.Version, res)
+	// Validate
 	count := len(res.Errors())
 	b.logger.Debugf("JSON Schema validator found %d issues in %s.", count, msg.ID())
 	for _, re := range res.Errors() {

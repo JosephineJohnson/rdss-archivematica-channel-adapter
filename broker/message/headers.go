@@ -21,6 +21,7 @@ type MessageHeader struct {
 	Version          string           `json:"version"`
 	ErrorCode        string           `json:"errorCode,omitempty"`
 	ErrorDescription string           `json:"errorDescription,omitempty"`
+	Generator        string           `json:"generator"`
 }
 
 // MessageClass is one of Command, Event or Document.
