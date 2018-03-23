@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"os"
 	"reflect"
@@ -58,12 +59,16 @@ func (a alwaysTrueFormatChecker) IsFormat(input interface{}) bool {
 
 func (a evenNumberFormatChecker) IsFormat(input interface{}) bool {
 
-	asFloat64, ok := input.(float64)
+	asBigFloat, ok := input.(*big.Float)
+
 	if ok == false {
 		return false
 	}
 
-	return int(asFloat64)%2 == 0
+	q := new(big.Float).SetFloat64(2)
+	q.Quo(asBigFloat, q)
+
+	return q.IsInt()
 }
 
 func (a invoiceFormatChecker) IsFormat(input interface{}) bool {
@@ -213,6 +218,24 @@ func TestJsonSchemaTestSuite(t *testing.T) {
 		{"phase": "not more complex schema", "test": "match", "schema": "not/schema_2.json", "data": "not/data_20.json", "valid": "true"},
 		{"phase": "not more complex schema", "test": "other match", "schema": "not/schema_2.json", "data": "not/data_21.json", "valid": "true"},
 		{"phase": "not more complex schema", "test": "mismatch", "schema": "not/schema_2.json", "data": "not/data_22.json", "valid": "false", "errors": "number_not"},
+		{"phase": "if then else", "test": "ignore if without then or else, valid when valid against lone if", "schema": "ifthenelse/schema_0.json", "data": "ifthenelse/data_00.json", "valid": "true"},
+		{"phase": "if then else", "test": "ignore if without then or else, valid when invailid against lone if", "schema": "ifthenelse/schema_0.json", "data": "ifthenelse/data_01.json", "valid": "true"},
+		{"phase": "if then else", "test": "ignore then without if, valid when valid against lone then", "schema": "ifthenelse/schema_1.json", "data": "ifthenelse/data_10.json", "valid": "true"},
+		{"phase": "if then else", "test": "ignore then without if, valid when invailid against lone then", "schema": "ifthenelse/schema_1.json", "data": "ifthenelse/data_11.json", "valid": "true"},
+		{"phase": "if then else", "test": "ignore else without if, valid when valid against lone else", "schema": "ifthenelse/schema_2.json", "data": "ifthenelse/data_20.json", "valid": "true"},
+		{"phase": "if then else", "test": "ignore else without if, valid when invailid against lone else", "schema": "ifthenelse/schema_2.json", "data": "ifthenelse/data_21.json", "valid": "true"},
+		{"phase": "if then else", "test": "if and then without else, valid through then", "schema": "ifthenelse/schema_3.json", "data": "ifthenelse/data_30.json", "valid": "true"},
+		{"phase": "if then else", "test": "if and then without else, invalid through then", "schema": "ifthenelse/schema_3.json", "data": "ifthenelse/data_31.json", "valid": "false", "errors": "condition_then, number_gte"},
+		{"phase": "if then else", "test": "if and then without else, valid when if test fails", "schema": "ifthenelse/schema_3.json", "data": "ifthenelse/data_32.json", "valid": "true"},
+		{"phase": "if then else", "test": "if and else without then, valid when if test passes", "schema": "ifthenelse/schema_4.json", "data": "ifthenelse/data_40.json", "valid": "true"},
+		{"phase": "if then else", "test": "if and else without then, valid through else", "schema": "ifthenelse/schema_4.json", "data": "ifthenelse/data_41.json", "valid": "true"},
+		{"phase": "if then else", "test": "if and else without then, invalid through else", "schema": "ifthenelse/schema_4.json", "data": "ifthenelse/data_42.json", "valid": "false", "errors": "condition_else, multiple_of"},
+		{"phase": "if then else", "test": "validate against correct branch, then vs else, valid through then", "schema": "ifthenelse/schema_5.json", "data": "ifthenelse/data_50.json", "valid": "true"},
+		{"phase": "if then else", "test": "validate against correct branch, then vs else, invalid through then", "schema": "ifthenelse/schema_5.json", "data": "ifthenelse/data_51.json", "valid": "false", "errors": "condition_then, number_gte"},
+		{"phase": "if then else", "test": "validate against correct branch, then vs else, valid through else", "schema": "ifthenelse/schema_5.json", "data": "ifthenelse/data_52.json", "valid": "true"},
+		{"phase": "if then else", "test": "validate against correct branch, then vs else, invalid through else", "schema": "ifthenelse/schema_5.json", "data": "ifthenelse/data_53.json", "valid": "false", "errors": "condition_else, multiple_of"},
+		{"phase": "if then else", "test": "non-interference across combined schemas, then vs else, valid, but woud have been invalid through then", "schema": "ifthenelse/schema_6.json", "data": "ifthenelse/data_60.json", "valid": "true"},
+		{"phase": "if then else", "test": "non-interference across combined schemas, then vs else, valid, but would have been invalid through else", "schema": "ifthenelse/schema_6.json", "data": "ifthenelse/data_61.json", "valid": "true"},
 		{"phase": "minProperties validation", "test": "longer is valid", "schema": "minProperties/schema_0.json", "data": "minProperties/data_00.json", "valid": "true"},
 		{"phase": "minProperties validation", "test": "exact length is valid", "schema": "minProperties/schema_0.json", "data": "minProperties/data_01.json", "valid": "true"},
 		{"phase": "minProperties validation", "test": "too short is invalid", "schema": "minProperties/schema_0.json", "data": "minProperties/data_02.json", "valid": "false", "errors": "array_min_properties"},
@@ -254,6 +277,8 @@ func TestJsonSchemaTestSuite(t *testing.T) {
 		{"phase": "root pointer ref", "test": "recursive match", "schema": "ref/schema_0.json", "data": "ref/data_01.json", "valid": "true"},
 		{"phase": "root pointer ref", "test": "mismatch", "schema": "ref/schema_0.json", "data": "ref/data_02.json", "valid": "false", "errors": "additional_property_not_allowed"},
 		{"phase": "root pointer ref", "test": "recursive mismatch", "schema": "ref/schema_0.json", "data": "ref/data_03.json", "valid": "false", "errors": "additional_property_not_allowed"},
+		{"phase": "loader pointer ref", "test": "root ref valid", "schema": "ref/schema_6.json#/definitions/x", "data": "ref/data_40.json", "valid": "true"},
+		{"phase": "loader pointer ref", "test": "root ref invalid", "schema": "ref/schema_6.json#/definitions/x", "data": "ref/data_41.json", "valid": "false", "errors": "invalid_type"},
 		{"phase": "relative pointer ref to object", "test": "match", "schema": "ref/schema_1.json", "data": "ref/data_10.json", "valid": "true"},
 		{"phase": "relative pointer ref to object", "test": "mismatch", "schema": "ref/schema_1.json", "data": "ref/data_11.json", "valid": "false", "errors": "invalid_type"},
 		{"phase": "relative pointer ref to array", "test": "match array", "schema": "ref/schema_2.json", "data": "ref/data_20.json", "valid": "true"},
@@ -360,11 +385,9 @@ func TestJsonSchemaTestSuite(t *testing.T) {
 		{"phase": "format validation", "test": "uri format is invalid", "schema": "format/schema_6.json", "data": "format/data_13.json", "valid": "false", "errors": "format"},
 		{"phase": "format validation", "test": "number format is valid", "schema": "format/schema_7.json", "data": "format/data_29.json", "valid": "true"},
 		{"phase": "format validation", "test": "number format is valid", "schema": "format/schema_7.json", "data": "format/data_30.json", "valid": "false", "errors": "format"},
+		{"phase": "change resolution scope", "test": "changed scope ref valid", "schema": "refRemote/schema_3.json", "data": "refRemote/data_30.json", "valid": "true"},
+		{"phase": "change resolution scope", "test": "changed scope ref invalid", "schema": "refRemote/schema_3.json", "data": "refRemote/data_31.json", "valid": "false", "errors": "invalid_type"},
 	}
-
-	//TODO Pass failed tests : id(s) as scope for references is not implemented yet
-	//map[string]string{"phase": "change resolution scope", "test": "changed scope ref valid", "schema": "refRemote/schema_3.json", "data": "refRemote/data_30.json", "valid": "true"},
-	//map[string]string{"phase": "change resolution scope", "test": "changed scope ref invalid", "schema": "refRemote/schema_3.json", "data": "refRemote/data_31.json", "valid": "false"}}
 
 	// Setup a small http server on localhost:1234 for testing purposes
 
@@ -416,6 +439,9 @@ func TestJsonSchemaTestSuite(t *testing.T) {
 		expectedValid, _ := strconv.ParseBool(testJson["valid"])
 		if givenValid != expectedValid {
 			t.Errorf("Test failed : %s :: %s, expects %t, given %t\n", testJson["phase"], testJson["test"], expectedValid, givenValid)
+			for _, e := range result.Errors() {
+				fmt.Println("Error: " + e.Type())
+			}
 		}
 
 		if !givenValid && testJson["errors"] != "" {
