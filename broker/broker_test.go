@@ -26,8 +26,11 @@ func ExampleBroker() {
 		return nil
 	})
 
-	// A publisher can publish a MetadataDelete request.
-	_ = b.Metadata.Delete(context.Background(), &message.MetadataDeleteRequest{})
+	// A publisher can publish a MetadataDelete request. Make sure that the
+	// message is valid otherwise it will not be delivered to the subscriber.
+	_ = b.Metadata.Delete(context.Background(), &message.MetadataDeleteRequest{
+		ObjectUuid: message.MustUUID("8468f86b-a936-41b3-a8a7-ef37e3008ba8"),
+	})
 
 	// Output: MetadataCreate message received!
 }
@@ -43,18 +46,18 @@ func TestPanickingSubscriber(t *testing.T) {
 
 func TestCounter(t *testing.T) {
 	var b, _, _ = newBroker(nil)
-	_ = b.Metadata.Delete(context.Background(), &message.MetadataDeleteRequest{})
-	_ = b.Vocabulary.Patch(context.Background(), &message.VocabularyPatchRequest{})
+	var msg = &message.MetadataDeleteRequest{ObjectUuid: message.MustUUID("c6065fb2-15e3-417f-9fcd-679ff8507e5e")}
+	_ = b.Metadata.Delete(context.Background(), msg)
+	_ = b.Metadata.Delete(context.Background(), msg)
 	if got, want := b.Count(), uint64(2); got != want {
 		t.Fatalf("b.Count mismatch: got %d, want %d", got, want)
 	}
 }
 
 func Test_messageHandler_duplicated(t *testing.T) {
-	var (
-		b, _, _ = newBroker(nil)
-		m       = message.New(message.MessageTypeMetadataDelete, message.MessageClassCommand)
-	)
+	b, _, _ := newBroker(nil)
+	m := message.New(message.MessageTypeMetadataDelete, message.MessageClassCommand)
+	m.MessageBody = &message.MetadataDeleteRequest{ObjectUuid: message.MustUUID("c6065fb2-15e3-417f-9fcd-679ff8507e5e")}
 	send := func() { _ = b.Request(context.Background(), m) }
 	// Send the same message twice.
 	send()
@@ -96,7 +99,7 @@ func Test_messageHandler_errorHandling(t *testing.T) {
 		return nil
 	})
 	// Send a message
-	_ = b.Metadata.Delete(context.Background(), &message.MetadataDeleteRequest{})
+	_ = b.Metadata.Delete(context.Background(), &message.MetadataDeleteRequest{ObjectUuid: message.MustUUID("c6065fb2-15e3-417f-9fcd-679ff8507e5e")})
 	// Wait up to a second, fail if the message is not received in time.
 	go func() {
 		time.Sleep(1 * time.Second)

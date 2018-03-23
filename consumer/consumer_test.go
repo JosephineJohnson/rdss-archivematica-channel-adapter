@@ -100,10 +100,9 @@ func tearDown() {
 func TestValidMetadataDeleteMessage(t *testing.T) {
 	// Build message MetadataDelete
 	msg := message.New(message.MessageTypeMetadataDelete, message.MessageClassCommand)
-	body := &message.MetadataDeleteRequest{
+	msg.MessageBody = &message.MetadataDeleteRequest{
 		ObjectUuid: message.MustUUID("a90652dd-6abd-424c-b7ce-d6728c7f3f9f"),
 	}
-	msg.MessageBody = body
 
 	t.Run("Publish message", func(t *testing.T) {
 		data, err := json.Marshal(msg)
@@ -124,6 +123,9 @@ func TestValidMetadataDeleteMessage(t *testing.T) {
 			// they won't be discarded as the local repository avoids delivering
 			// the same message more than once.
 			msg = message.New(message.MessageTypeMetadataDelete, message.MessageClassCommand)
+			msg.MessageBody = &message.MetadataDeleteRequest{
+				ObjectUuid: message.MustUUID("a90652dd-6abd-424c-b7ce-d6728c7f3f9f"),
+			}
 			data, _ = json.Marshal(msg)
 			bmock.Publish("", data)
 		}
