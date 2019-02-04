@@ -31,14 +31,14 @@ insecure_skip_verify = false
 endpoint = ""
 access_key = ""
 secret_key = ""
-region = ""
+region = "eu-west-2"
 
 [consumer]
 backend = "builtin"
 dynamodb_tls = true
 dynamodb_table = "consumer_storage"
 dynamodb_endpoint = ""
-dynamodb_region = ""
+dynamodb_region = "eu-west-2"
 
 [publisher]
 listen = "0.0.0.0:8000"
@@ -60,11 +60,11 @@ backend = "builtin"
 dynamodb_tls = true
 dynamodb_table = "rdss_am_messages"
 dynamodb_endpoint = ""
-dynamodb_region = ""
+dynamodb_region = "eu-west-2"
 
 [broker.kinesis]
 app_name = "rdss_am"
-region = ""
+region = "eu-west-2"
 tls = true
 endpoint = ""
 role_arn = ""
